@@ -1,0 +1,223 @@
+<!doctype html>
+<!--
+Copyright 2019 The Immersive Web Community Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
+    <meta name='mobile-web-app-capable' content='yes'>
+    <meta name='apple-mobile-web-app-capable' content='yes'>
+    <link rel='icon' type='image/png' sizes='32x32' href='favicon-32x32.png'>
+    <link rel='icon' type='image/png' sizes='96x96' href='favicon-96x96.png'>
+  </head>
+
+  <body>
+    <script src="js/third-party/three.js/examples/js/vr/HelioWebXRPolyfill.js"></script>
+
+    <script type="module">
+      import * as THREE from './js/third-party/three.js/build/three.module.js';
+
+      import Stats from './js/third-party/three.js/examples/jsm/libs/stats.module.js';
+
+      import { OrbitControls } from './js/third-party/three.js/examples/jsm/controls/OrbitControls.js';
+      import { GLTFLoader } from './js/third-party/three.js/examples/jsm/loaders/GLTFLoader.js';
+      import { RGBELoader } from './js/third-party/three.js/examples/jsm/loaders/RGBELoader.js';
+      import { PMREMGenerator } from './js/third-party/three.js/examples/jsm/pmrem/PMREMGenerator.js';
+      import { PMREMCubeUVPacker } from './js/third-party/three.js/examples/jsm/pmrem/PMREMCubeUVPacker.js';
+      import { VRButton } from './js/third-party/three.js/examples/jsm/webxr/VRButton.js';
+
+      let container, stats, controls;
+      let camera, scene, renderer;
+      let envMap;
+      let mixer;
+
+      let clock = new THREE.Clock();
+
+      let dinos = {
+        trex: {
+          name: 'Tyrannosaurus Rex',
+          path: 'media/tyrannosaurus/',
+          height: 5.2
+        },
+        stegosaurus: {
+          name: 'Stegosaurus',
+          path: 'media/stegosaurus/',
+          height: 2.75
+        },
+        brachiosaurus: {
+          name: 'Brachiosaurus',
+          path: 'media/brachiosaurus/',
+          height: 13
+        }
+      };
+
+      let actions = {};
+
+      init();
+      animate();
+
+      function init() {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
+        camera.position.set(0, 5.0, 5.0);
+
+        scene = new THREE.Scene();
+
+        loadSkybox();
+
+        buildFloor();
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.gammaOutput = true;
+        renderer.vr.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        window.addEventListener('resize', onWindowResize, false);
+
+        // stats
+        stats = new Stats();
+        container.appendChild(stats.dom);
+
+        document.body.appendChild(VRButton.createButton(renderer));
+      }
+
+      function loadSkybox() {
+        new RGBELoader()
+          .setDataType(THREE.UnsignedByteType)
+          .setPath('media/textures/equirectangular/')
+          .load('misty_pines_2k.hdr', (texture) => {
+            let options = {
+              minFilter: texture.minFilter,
+              magFilter: texture.magFilter
+            };
+
+            scene.background = new THREE.WebGLRenderTargetCube(1024, 1024, options).fromEquirectangularTexture(renderer, texture);
+
+            let pmremGenerator = new PMREMGenerator(scene.background.texture);
+            pmremGenerator.update(renderer);
+
+            let pmremCubeUVPacker = new PMREMCubeUVPacker(pmremGenerator.cubeLods);
+            pmremCubeUVPacker.update(renderer);
+
+            envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
+
+            loadModel(dinos.trex);
+
+            pmremGenerator.dispose();
+            pmremCubeUVPacker.dispose();
+        });
+      }
+
+      function loadModel(dino) {
+        let loader = new GLTFLoader().setPath(dino.path);
+        loader.load('scene.gltf', (gltf) => {
+          gltf.scene.traverse((child) => {
+            if (child.isMesh) {
+              child.material.envMap = envMap;
+            }
+          });
+
+          let bbox = new THREE.Box3().setFromObject(gltf.scene);
+          let modelScale = dino.height / (bbox.max.y - bbox.min.y);
+
+          // Scale to a more realistic size in meters
+          gltf.scene.scale.set(modelScale, modelScale, modelScale);
+          // Position feet on the floor
+          gltf.scene.position.y = -(bbox.min.y * modelScale);
+
+          gltf.scene.position.z = -4;
+
+          mixer = new THREE.AnimationMixer( gltf.scene );
+          mixer.addEventListener('finished', (e) => {
+            if (e.action == actions.Die) {
+              actions.Die.stop();
+              actions.Get_Up.play();
+            } else if (e.action == actions.Get_Up) {
+              actions.Get_Up.stop();
+              actions.Die.play();
+            }
+          });
+
+          let animations = gltf.animations;
+          for (let i = 0; i < animations.length; ++i) {
+            let animation = animations[i];
+            actions[animation.name] = mixer.clipAction(animation);
+          }
+
+          //actions.Die.clampWhenFinished = true;
+          actions.Die.loop = THREE.LoopOnce;
+          //actions.Get_Up.clampWhenFinished = true;
+          actions.Get_Up.loop = THREE.LoopOnce;
+          //actions.Roar.loop = THREE.LoopOnce;
+
+          actions.Roar.play();
+
+          scene.add(gltf.scene);
+        });
+      }
+
+      function buildFloor() {
+        let geometry = new THREE.PlaneBufferGeometry(20, 20);
+				let material = new THREE.MeshStandardMaterial({
+					color: 0x22AA22,
+					roughness: 1.0,
+					metalness: 0.0
+				});
+				let floor = new THREE.Mesh(geometry, material);
+				floor.rotation.x = - Math.PI / 2.0;
+				scene.add(floor);
+
+				let grid = new THREE.GridHelper(20, 20, 0x111111, 0x111111);
+				// grid.material.depthTest = false; // avoid z-fighting
+				scene.add( grid );
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+      }
+
+      //
+
+      function animate() {
+        renderer.setAnimationLoop( render );
+      }
+
+      function render() {
+        if(mixer) { mixer.update( clock.getDelta() ); }
+
+        renderer.render( scene, camera );
+
+        stats.update();
+      }
+    </script>
+  </body>
+</html>
