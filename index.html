@@ -46,6 +46,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       let container, stats, controls;
       let camera, scene, renderer;
+      let dinoScene;
       let envMap;
       let mixer;
 
@@ -78,6 +79,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         container = document.createElement('div');
         document.body.appendChild(container);
 
+        buildList();
+
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
         camera.position.set(0, 5.0, 5.0);
 
@@ -105,6 +108,26 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         container.appendChild(stats.dom);
 
         document.body.appendChild(VRButton.createButton(renderer));
+      }
+
+      function buildList() {
+        let dinoList = document.createElement('select');
+        dinoList.addEventListener('change', () => {
+          let dino = dinos[dinoList.value];
+          loadModel(dino);
+        });
+        dinoList.style.position = 'absolute';
+        dinoList.style.right = '1em';
+        dinoList.style.top = '1em';
+        dinoList.style.zIndex = '999';
+        for (let i in dinos) {
+          let dino = dinos[i];
+          let option = document.createElement('option');
+          option.innerText = dino.name;
+          option.value = i;
+          dinoList.appendChild(option);
+        }
+        document.body.appendChild(dinoList);
       }
 
       function loadSkybox() {
@@ -135,6 +158,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       function loadModel(dino) {
+        if (dinoScene) {
+          scene.remove(dinoScene);
+        }
         let loader = new GLTFLoader().setPath(dino.path);
         loader.load('scene.gltf', (gltf) => {
           gltf.scene.traverse((child) => {
@@ -151,9 +177,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           // Position feet on the floor
           gltf.scene.position.y = -(bbox.min.y * modelScale);
 
-          gltf.scene.position.z = -4;
+          gltf.scene.position.z = -5;
 
-          mixer = new THREE.AnimationMixer( gltf.scene );
+          mixer = new THREE.AnimationMixer(gltf.scene);
           mixer.addEventListener('finished', (e) => {
             if (e.action == actions.Die) {
               actions.Die.stop();
@@ -165,6 +191,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           });
 
           let animations = gltf.animations;
+          actions = {};
           for (let i = 0; i < animations.length; ++i) {
             let animation = animations[i];
             actions[animation.name] = mixer.clipAction(animation);
@@ -178,7 +205,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           actions.Roar.play();
 
-          scene.add(gltf.scene);
+          dinoScene = gltf.scene;
+          scene.add(dinoScene);
         });
       }
 
@@ -204,8 +232,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         renderer.setSize( window.innerWidth, window.innerHeight );
       }
-
-      //
 
       function animate() {
         renderer.setAnimationLoop( render );
