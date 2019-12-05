@@ -55,6 +55,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const TOP_ROW_DISTANCE = -1;
 
       const LEFT_BUTTON_X = (BUTTON_SPACING * (ROW_LENGTH - 1) * -0.5);
+      const HORN_BUTTON_POSITION = new THREE.Vector3(0.65, 0.375, -0.95);
 
       let container, stats, controls;
       let camera, scene, renderer;
@@ -65,8 +66,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let currentAction = null;
       let scared = false;
 
+      let audioLoader = new THREE.AudioLoader();
       let dinoSceneToAnimationRootTransform = new THREE.Matrix4();
       let clock = new THREE.Clock();
+
+      let listener = new THREE.AudioListener();
+      let ambientSounds = null;
+      let hornSound = null;
+      let hornButton = null;
 
       let dinos = {
         ankylosaurus: {
@@ -136,6 +143,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
         camera.position.set(0, 5.0, 5.0);
+        camera.add(listener);
 
         scene = new THREE.Scene();
 
@@ -183,6 +191,28 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         document.body.appendChild(VRButton.createButton(renderer));
 
+        renderer.vr.addEventListener('sessionstart', () => {
+          // Load and play ambient jungle sounds once the user enters VR.
+          if (!ambientSounds) {
+            ambientSounds = new THREE.Audio(listener);
+            audioLoader.load('media/sounds/jungle-ambient.mp3', (buffer) => {
+              ambientSounds.setBuffer(buffer);
+              ambientSounds.setLoop(true);
+              ambientSounds.setVolume(0.5);
+              ambientSounds.play();
+            });
+          } else {
+            ambientSounds.play();
+          }
+        });
+
+        renderer.vr.addEventListener('sessionend', () => {
+          // Load and play ambient jungle sounds once the user enters VR.
+          if (ambientSounds) {
+            ambientSounds.stop();
+          }
+        });
+
         renderer.setAnimationLoop(render);
       }
 
@@ -198,18 +228,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         dinoList.style.zIndex = '999';
         document.body.appendChild(dinoList);
 
-
-        let hornButton = document.createElement('button');
-        hornButton.addEventListener('click', () => {
+        let hornButtonDOM = document.createElement('button');
+        hornButtonDOM.addEventListener('click', () => {
           scare();
         });
-        hornButton.innerText = 'Airhorn';
-        hornButton.style.position = 'absolute';
-        hornButton.style.right = '1em';
-        hornButton.style.top = '3em';
-        hornButton.style.zIndex = '999';
-        document.body.appendChild(hornButton);
-
+        hornButtonDOM.innerText = 'Airhorn';
+        hornButtonDOM.style.position = 'absolute';
+        hornButtonDOM.style.right = '1em';
+        hornButtonDOM.style.top = '3em';
+        hornButtonDOM.style.zIndex = '999';
+        document.body.appendChild(hornButtonDOM);
+        
         let x = LEFT_BUTTON_X;
         let y = TOP_ROW_HEIGHT;
         let z = TOP_ROW_DISTANCE;
@@ -243,17 +272,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           document.body.appendChild(button.domElement);
         }
 
-        let button = buttonManager.createButton({
+        hornButton = buttonManager.createButton({
           imageUrl: `media/textures/horn.png`,
           title: "Airhorn",
           onClick: () => {
             scare();
           },
         });
-        button.scale.multiplyScalar(1.1);
-        button.position.set(0.65, 0.375, -0.95);
-        button.rotation.x = Math.PI * 0.4;
-        scene.add(button);
+        hornButton.scale.multiplyScalar(1.1);
+        hornButton.position.copy(HORN_BUTTON_POSITION);
+        hornButton.rotation.x = Math.PI * 0.4;
+        scene.add(hornButton);
       }
 
       function loadSkybox() {
@@ -406,12 +435,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       function scare() {
-        if (scared) { return; }
-        scared = true;
+        if (!hornSound) {
+          audioLoader.load('media/sounds/horn.mp3', (buffer) => {
+            hornSound = new THREE.Audio(listener);
+            hornSound.setBuffer(buffer);
+            //hornButton.add(hornSound);
+            //hornSound.setVolume(1.2);
+            scare();
+          });
+        } else {
+          hornSound.play();
 
-        currentAction.crossFadeTo(actions.Die, 0.25);
-        currentAction = actions.Die;
-        actions.Die.play();
+          if (scared) { return; }
+          scared = true;
+
+          currentAction.crossFadeTo(actions.Die, 0.25);
+          currentAction = actions.Die;
+          actions.Die.play();
+        }
       }
 
       function buildFloor() {
