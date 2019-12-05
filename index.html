@@ -69,19 +69,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let clock = new THREE.Clock();
 
       let dinos = {
-        velociraptor: {
-          name: 'Velociraptor',
-          path: 'media/models/velociraptor/',
-          height: 1.5,
-          //animationSequence: ['Idle', 'Shake', 'Idle'],
-        },
-        trex: {
-          name: 'Tyrannosaurus Rex',
-          path: 'media/models/tyrannosaurus/',
-          height: 5.2, // All heights in meters,
-          distance: 7,
-          animationSequence: ['Idle', 'Idle', 'Roar'],
-          animationRoot: 'TRex_01'
+        ankylosaurus: {
+          name: 'Ankylosaurus',
+          path: 'media/models/ankylosaurus/',
+          height: 1.7,
+          distance: 5,
+          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
         stegosaurus: {
           name: 'Stegosaurus',
@@ -89,24 +82,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           height: 2.75,
           animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
-        brachiosaurus: {
-          name: 'Brachiosaurus',
-          path: 'media/models/brachiosaurus/',
-          distance: 8,
-          height: 13,
-          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
+        velociraptor: {
+          name: 'Velociraptor',
+          path: 'media/models/velociraptor/',
+          height: 1.5,
+          animationSequence: ['Idle', 'Scratch', 'Idle', 'Shake'],
         },
         triceratops: {
           name: 'Triceratops',
           path: 'media/models/triceratops/',
-          height: 2.9
-        },
-        ankylosaurus: {
-          name: 'Ankylosaurus',
-          path: 'media/models/ankylosaurus/',
-          height: 1.7,
-          distance: 5,
-          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
+          height: 2.9,
+          animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side'],
         },
         parasaurolophus: {
           name: 'Parasaurolophus',
@@ -119,6 +105,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           path: 'media/models/pachycephalosaurus/',
           height: 3,
           distance: 5,
+          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
+        },
+        trex: {
+          name: 'Tyrannosaurus Rex',
+          path: 'media/models/tyrannosaurus/',
+          height: 5.2, // All heights in meters,
+          distance: 7,
+          animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side'],
+          animationRoot: 'TRex_01'
+        },
+        brachiosaurus: {
+          name: 'Brachiosaurus',
+          path: 'media/models/brachiosaurus/',
+          distance: 8,
+          height: 13,
           animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
       };
@@ -275,7 +276,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
             envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
 
-            loadModel(dinos.velociraptor);
+            // Initial model to load
+            loadModel(dinos.ankylosaurus);
 
             pmremGenerator.dispose();
             pmremCubeUVPacker.dispose();
@@ -284,6 +286,37 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         var light = new THREE.HemisphereLight( 0xffffff, 0x444444 );
 				light.position.set( 1, 1, 1 );
 				scene.add( light );
+      }
+
+      // The models we're using here have an incredibly annoying issue where
+      // many of the animations start with several seconds of "empty" keyframes.
+      // (Just the default pose.) This really should be fixed in the models
+      // themselves, but seeing as how I've been having issues with various
+      // importers/exporters I instead wrote up this quick utility to trim off
+      // all the dead space at the beginning of each track. It's not pretty, but
+      // it works for now.
+      function trimEmptyLeadingKeyframes(animation) {
+        let firstTime = animation.tracks[0].times[0];
+        if (firstTime <= 0) { return; }
+        for (let track of animation.tracks) {
+          let firstTrackTime = track.times[0];
+          if (firstTime > firstTrackTime) {
+            firstTime = firstTrackTime;
+            if (firstTime <= 0) {
+              return;
+            }
+          }
+        }
+        
+        // If the animation start time was greater than zero adjust all
+        // track times (and the animation duration) to re-root the animation
+        // at 0.
+        animation.duration -= firstTime;
+        for (let track of animation.tracks) {
+          for (let i = 0; i < track.times.length; ++i) {
+            track.times[i] -= firstTime;
+          }
+        }
       }
 
       function loadModel(dino) {
@@ -338,6 +371,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           actions = {};
           for (let i = 0; i < animations.length; ++i) {
             let animation = animations[i];
+            trimEmptyLeadingKeyframes(animation);
             let action = mixer.clipAction(animation);
             actions[animation.name] = mixer.clipAction(animation);
             if (animation.name == 'Die' || animation.name == 'Get_Up') {
@@ -351,12 +385,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             if (animationRoot) {
               //dinoScene.applyMatrix(animationRoot.matrixWorld);
             }
-            e.action.stop();
             if (e.action == actions.Die) {
+              mixer.stopAllAction();
               scared = false;
               actions.Get_Up.play();
               currentAction = actions.Get_Up;
             } else if (!scared) {
+              mixer.stopAllAction();
               animationIndex = ++animationIndex % animationSequence.length;
               currentAction = actions[animationSequence[animationIndex]];
               currentAction.play();
@@ -380,7 +415,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       function buildFloor() {
-        let geometry = new THREE.PlaneBufferGeometry(20, 20);
+        let geometry = new THREE.PlaneBufferGeometry(25, 25);
 				let material = new THREE.MeshStandardMaterial({
 					color: 0x22AA22,
 					roughness: 1.0,
@@ -390,7 +425,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 				floor.rotation.x = - Math.PI / 2.0;
 				scene.add(floor);
 
-				let grid = new THREE.GridHelper(20, 20, 0x111111, 0x111111);
+				let grid = new THREE.GridHelper(25, 25, 0x111111, 0x111111);
 				// grid.material.depthTest = false; // avoid z-fighting
         scene.add(grid);
       }
