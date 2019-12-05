@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-Copyright 2019 The Immersive Web Community Group
+Copyright 2019 Brandon Jones
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -27,6 +27,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <meta name='apple-mobile-web-app-capable' content='yes'>
     <link rel='icon' type='image/png' sizes='32x32' href='favicon-32x32.png'>
     <link rel='icon' type='image/png' sizes='96x96' href='favicon-96x96.png'>
+
+    <title>WebXR Dinosaurs</title>
   </head>
 
   <body>
@@ -44,19 +46,31 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { PMREMCubeUVPacker } from './js/third-party/three.js/examples/jsm/pmrem/PMREMCubeUVPacker.js';
       import { VRButton } from './js/third-party/three.js/examples/jsm/webxr/VRButton.js';
 
+      import { XRButtonManager } from './js/xr-button.js';
+
       let container, stats, controls;
       let camera, scene, renderer;
-      let dinoScene;
+      let dinoScene, animationRoot;
+      let controller0, controller1;
       let envMap;
       let mixer;
 
+      let dinoSceneToAnimationRootTransform = new THREE.Matrix4();
       let clock = new THREE.Clock();
 
       let dinos = {
+        velociraptor: {
+          name: 'Velociraptor',
+          path: 'media/models/velociraptor/',
+          height: 1.5
+        },
         trex: {
           name: 'Tyrannosaurus Rex',
           path: 'media/models/tyrannosaurus/',
-          height: 5.2 // All heights in meters
+          height: 5.2, // All heights in meters,
+          distance: 7,
+          animationSequence: ['Idle', 'Idle', 'Roar', 'Stomp'],
+          animationRoot: 'TRex_01'
         },
         stegosaurus: {
           name: 'Stegosaurus',
@@ -66,6 +80,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         brachiosaurus: {
           name: 'Brachiosaurus',
           path: 'media/models/brachiosaurus/',
+          distance: 8,
           height: 13
         },
         triceratops: {
@@ -73,43 +88,41 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           path: 'media/models/triceratops/',
           height: 2.9
         },
-        velociraptor: {
-          name: 'Velociraptor',
-          path: 'media/models/velociraptor/',
-          height: 1.5
-        },
         ankylosaurus: {
           name: 'Ankylosaurus',
           path: 'media/models/ankylosaurus/',
-          height: 1.7
+          height: 1.7,
+          distance: 5,
         },
         parasaurolophus: {
           name: 'Parasaurolophus',
           path: 'media/models/parasaurolophus/',
-          height: 4
+          height: 4,
+          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
         pachycephalosaurus: {
           name: 'Pachycephalosaurus',
           path: 'media/models/pachycephalosaurus/',
-          height: 4
+          height: 3
         },
       };
 
       let actions = {};
 
+      const buttonManager = new XRButtonManager();
+
       init();
-      animate();
 
       function init() {
         container = document.createElement('div');
         document.body.appendChild(container);
 
-        buildList();
-
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
         camera.position.set(0, 5.0, 5.0);
 
         scene = new THREE.Scene();
+
+        buildList();
 
         loadSkybox();
 
@@ -126,6 +139,25 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         controls.target.set(0, 0, 0);
         controls.update();
 
+        controller0 = renderer.vr.getController(0);
+				buttonManager.addController(controller0);
+        scene.add(controller0);
+        
+				controller1 = renderer.vr.getController(1);
+				buttonManager.addController(controller1);
+				scene.add(controller1);
+        
+        //
+				let geometry = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, - 1)
+        ]);
+				let line = new THREE.Line(geometry);
+				line.name = 'line';
+				line.scale.z = 5;
+				controller0.add(line.clone());
+				controller1.add(line.clone());
+
         window.addEventListener('resize', onWindowResize, false);
 
         // stats
@@ -133,6 +165,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         container.appendChild(stats.dom);
 
         document.body.appendChild(VRButton.createButton(renderer));
+
+        renderer.setAnimationLoop(render);
       }
 
       function buildList() {
@@ -145,12 +179,29 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         dinoList.style.right = '1em';
         dinoList.style.top = '1em';
         dinoList.style.zIndex = '999';
+        let x = -1;
         for (let i in dinos) {
           let dino = dinos[i];
           let option = document.createElement('option');
           option.innerText = dino.name;
           option.value = i;
           dinoList.appendChild(option);
+
+          let button = buttonManager.createButton({
+            imageUrl: `${dino.path}button.png`,
+            title: dino.name,
+            onClick: () => {
+              loadModel(dino);
+            },
+          });
+          button.position.x = x;
+          button.position.z = -1;
+          button.position.y = 1;
+          button.rotation.x = Math.PI * 0.25;
+          x += 0.25;
+          scene.add(button);
+
+          document.body.appendChild(button.domElement);
         }
         document.body.appendChild(dinoList);
       }
@@ -175,11 +226,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
             envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
 
-            loadModel(dinos.trex);
+            loadModel(dinos.velociraptor);
 
             pmremGenerator.dispose();
             pmremCubeUVPacker.dispose();
         });
+
+        var light = new THREE.HemisphereLight( 0xffffff, 0x444444 );
+				light.position.set( 1, 1, 1 );
+				scene.add( light );
       }
 
       function loadModel(dino) {
@@ -188,50 +243,67 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         }
         let loader = new GLTFLoader().setPath(dino.path);
         loader.load('scene.gltf', (gltf) => {
-          gltf.scene.traverse((child) => {
+          dinoScene = gltf.scene;
+
+          dinoScene.traverse((child) => {
             if (child.isMesh) {
               child.material.envMap = envMap;
             }
           });
 
-          let bbox = new THREE.Box3().setFromObject(gltf.scene);
+          let bbox = new THREE.Box3().setFromObject(dinoScene);
           let modelScale = dino.height / (bbox.max.y - bbox.min.y);
 
           // Scale to a more realistic size in meters
-          gltf.scene.scale.set(modelScale, modelScale, modelScale);
-          // Position feet on the floor
-          gltf.scene.position.y = -(bbox.min.y * modelScale);
+          dinoScene.children[0].scale.set(modelScale, modelScale, modelScale);
 
-          gltf.scene.position.z = -5;
+          if (dino.animationRoot) {
+            dinoScene.updateMatrixWorld();
+            // Force the default animation root transform to the origin
+            animationRoot = dinoScene.getObjectByName(dino.animationRoot);
+            if (animationRoot) {
+              let rootPos = new THREE.Vector3();
+              animationRoot.getWorldPosition(rootPos);
 
-          mixer = new THREE.AnimationMixer(gltf.scene);
-          mixer.addEventListener('finished', (e) => {
-            if (e.action == actions.Die) {
-              actions.Die.stop();
-              actions.Get_Up.play();
-            } else if (e.action == actions.Get_Up) {
-              actions.Get_Up.stop();
-              actions.Die.play();
+              // This only works because the models we're using have a couple of
+              // levels of static transform nodes baked into them. If they
+              // didn't we'd have to add a separate layer above the dinoScene.
+              dinoScene.children[0].position.set(-rootPos.x, -rootPos.y, -rootPos.z);
             }
-          });
+          } else {
+            animationRoot = null;
+          }
+
+          bbox = new THREE.Box3().setFromObject(dinoScene);
+
+          // Position feet on the floor
+          dinoScene.position.y = -bbox.min.y;
+          dinoScene.position.z = (dino.distance || 3) * -1;
+
+          scene.add(dinoScene);
+
+          mixer = new THREE.AnimationMixer(dinoScene);
 
           let animations = gltf.animations;
           actions = {};
           for (let i = 0; i < animations.length; ++i) {
             let animation = animations[i];
+            let action = mixer.clipAction(animation);
             actions[animation.name] = mixer.clipAction(animation);
           }
 
-          //actions.Die.clampWhenFinished = true;
-          actions.Die.loop = THREE.LoopOnce;
-          //actions.Get_Up.clampWhenFinished = true;
-          actions.Get_Up.loop = THREE.LoopOnce;
-          //actions.Roar.loop = THREE.LoopOnce;
+          let animationIndex = 0;
+          let animationSequence = dino.animationSequence || ['Idle'];
+          mixer.addEventListener('loop', (e) => {
+            if (animationRoot) {
+              //dinoScene.applyMatrix(animationRoot.matrixWorld);
+            }
+            e.action.stop();
+            animationIndex = ++animationIndex % animationSequence.length;
+            actions[animationSequence[animationIndex]].play();
+          });
 
-          actions.Roar.play();
-
-          dinoScene = gltf.scene;
-          scene.add(dinoScene);
+          actions[animationSequence[0]].play();
         });
       }
 
@@ -248,7 +320,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 				let grid = new THREE.GridHelper(20, 20, 0x111111, 0x111111);
 				// grid.material.depthTest = false; // avoid z-fighting
-				scene.add( grid );
+        scene.add(grid);
       }
 
       function onWindowResize() {
@@ -258,14 +330,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         renderer.setSize( window.innerWidth, window.innerHeight );
       }
 
-      function animate() {
-        renderer.setAnimationLoop( render );
-      }
-
       function render() {
-        if(mixer) { mixer.update( clock.getDelta() ); }
+        let delta = clock.getDelta();
+        if(mixer) {
+          mixer.update(delta);
+        }
 
-        renderer.render( scene, camera );
+        buttonManager.update(delta);
+
+        renderer.render(scene, camera);
 
         stats.update();
       }
