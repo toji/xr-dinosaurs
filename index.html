@@ -48,6 +48,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       import { XRButtonManager } from './js/xr-button.js';
 
+      // VR Button Layout
+      const ROW_LENGTH = 4;
+      const BUTTON_SPACING = 0.25;
+      const TOP_ROW_HEIGHT = 0.5;
+      const TOP_ROW_DISTANCE = -1;
+
+      const LEFT_BUTTON_X = (BUTTON_SPACING * (ROW_LENGTH - 1) * -0.5);
+
       let container, stats, controls;
       let camera, scene, renderer;
       let dinoScene, animationRoot;
@@ -62,26 +70,29 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         velociraptor: {
           name: 'Velociraptor',
           path: 'media/models/velociraptor/',
-          height: 1.5
+          height: 1.5,
+          //animationSequence: ['Idle', 'Shake', 'Idle'],
         },
         trex: {
           name: 'Tyrannosaurus Rex',
           path: 'media/models/tyrannosaurus/',
           height: 5.2, // All heights in meters,
           distance: 7,
-          animationSequence: ['Idle', 'Idle', 'Roar', 'Stomp'],
+          animationSequence: ['Idle', 'Idle', 'Roar'],
           animationRoot: 'TRex_01'
         },
         stegosaurus: {
           name: 'Stegosaurus',
           path: 'media/models/stegosaurus/',
-          height: 2.75
+          height: 2.75,
+          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
         brachiosaurus: {
           name: 'Brachiosaurus',
           path: 'media/models/brachiosaurus/',
           distance: 8,
-          height: 13
+          height: 13,
+          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
         triceratops: {
           name: 'Triceratops',
@@ -93,6 +104,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           path: 'media/models/ankylosaurus/',
           height: 1.7,
           distance: 5,
+          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
         parasaurolophus: {
           name: 'Parasaurolophus',
@@ -103,7 +115,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         pachycephalosaurus: {
           name: 'Pachycephalosaurus',
           path: 'media/models/pachycephalosaurus/',
-          height: 3
+          height: 3,
+          distance: 5,
+          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
       };
 
@@ -179,7 +193,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         dinoList.style.right = '1em';
         dinoList.style.top = '1em';
         dinoList.style.zIndex = '999';
-        let x = -1;
+
+        let x = LEFT_BUTTON_X;
+        let y = TOP_ROW_HEIGHT;
+        let z = TOP_ROW_DISTANCE;
+        let idx = 0;
         for (let i in dinos) {
           let dino = dinos[i];
           let option = document.createElement('option');
@@ -194,11 +212,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
               loadModel(dino);
             },
           });
-          button.position.x = x;
-          button.position.z = -1;
-          button.position.y = 1;
-          button.rotation.x = Math.PI * 0.25;
-          x += 0.25;
+          button.position.set(x, y, z);
+          button.rotation.x = Math.PI * 0.4;
+          idx++;
+          if (idx % ROW_LENGTH == 0) {
+            x = LEFT_BUTTON_X;
+            y -= BUTTON_SPACING;
+            z += 0.1;
+          } else {
+            x += BUTTON_SPACING;
+          }
           scene.add(button);
 
           document.body.appendChild(button.domElement);
@@ -279,6 +302,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           // Position feet on the floor
           dinoScene.position.y = -bbox.min.y;
           dinoScene.position.z = (dino.distance || 3) * -1;
+          dinoScene.rotation.y = Math.PI * 0.2;
 
           scene.add(dinoScene);
 
