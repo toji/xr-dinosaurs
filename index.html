@@ -29,6 +29,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <link rel='icon' type='image/png' sizes='96x96' href='favicon-96x96.png'>
 
     <title>WebXR Dinosaurs</title>
+
+    <style>
+      canvas {
+        position: absolute;
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+        touch-action: none;
+      }
+    </style>
   </head>
 
   <body>
@@ -271,7 +286,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           }
           scene.add(button);
 
-          document.body.appendChild(button.domElement);
+          //document.body.appendChild(button.domElement);
         }
 
         hornButton = buttonManager.createButton({
