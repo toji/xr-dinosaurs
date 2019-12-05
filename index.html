@@ -62,6 +62,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let controller0, controller1;
       let envMap;
       let mixer;
+      let currentAction = null;
+      let scared = false;
 
       let dinoSceneToAnimationRootTransform = new THREE.Matrix4();
       let clock = new THREE.Clock();
@@ -193,6 +195,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         dinoList.style.right = '1em';
         dinoList.style.top = '1em';
         dinoList.style.zIndex = '999';
+        document.body.appendChild(dinoList);
+
+
+        let hornButton = document.createElement('button');
+        hornButton.addEventListener('click', () => {
+          scare();
+        });
+        hornButton.innerText = 'Airhorn';
+        hornButton.style.position = 'absolute';
+        hornButton.style.right = '1em';
+        hornButton.style.top = '3em';
+        hornButton.style.zIndex = '999';
+        document.body.appendChild(hornButton);
 
         let x = LEFT_BUTTON_X;
         let y = TOP_ROW_HEIGHT;
@@ -226,7 +241,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           document.body.appendChild(button.domElement);
         }
-        document.body.appendChild(dinoList);
+
+        let button = buttonManager.createButton({
+          imageUrl: `media/textures/horn.png`,
+          title: "Airhorn",
+          onClick: () => {
+            scare();
+          },
+        });
+        button.scale.multiplyScalar(1.1);
+        button.position.set(0.65, 0.375, -0.95);
+        button.rotation.x = Math.PI * 0.4;
+        scene.add(button);
       }
 
       function loadSkybox() {
@@ -278,7 +304,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           let modelScale = dino.height / (bbox.max.y - bbox.min.y);
 
           // Scale to a more realistic size in meters
-          dinoScene.children[0].scale.set(modelScale, modelScale, modelScale);
+          dinoScene.children[0].scale.multiplyScalar(modelScale);
 
           if (dino.animationRoot) {
             dinoScene.updateMatrixWorld();
@@ -314,21 +340,43 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             let animation = animations[i];
             let action = mixer.clipAction(animation);
             actions[animation.name] = mixer.clipAction(animation);
+            if (animation.name == 'Die' || animation.name == 'Get_Up') {
+              action.loop = THREE.LoopOnce;
+            }
           }
 
           let animationIndex = 0;
           let animationSequence = dino.animationSequence || ['Idle'];
-          mixer.addEventListener('loop', (e) => {
+          function nextAnimation(e) {
             if (animationRoot) {
               //dinoScene.applyMatrix(animationRoot.matrixWorld);
             }
             e.action.stop();
-            animationIndex = ++animationIndex % animationSequence.length;
-            actions[animationSequence[animationIndex]].play();
-          });
+            if (e.action == actions.Die) {
+              scared = false;
+              actions.Get_Up.play();
+              currentAction = actions.Get_Up;
+            } else if (!scared) {
+              animationIndex = ++animationIndex % animationSequence.length;
+              currentAction = actions[animationSequence[animationIndex]];
+              currentAction.play();
+            }
+          }
+          mixer.addEventListener('loop', nextAnimation);
+          mixer.addEventListener('finished', nextAnimation);
 
-          actions[animationSequence[0]].play();
+          currentAction = actions[animationSequence[0]];
+          currentAction.play();
         });
+      }
+
+      function scare() {
+        if (scared) { return; }
+        scared = true;
+
+        currentAction.crossFadeTo(actions.Die, 0.25);
+        currentAction = actions.Die;
+        actions.Die.play();
       }
 
       function buildFloor() {
