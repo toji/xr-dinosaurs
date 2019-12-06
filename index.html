@@ -71,6 +71,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       const LEFT_BUTTON_X = (BUTTON_SPACING * (ROW_LENGTH - 1) * -0.5);
       const HORN_BUTTON_POSITION = new THREE.Vector3(0.65, 0.375, -0.95);
+      const UP_BUTTON_POSITION = new THREE.Vector3(-0.65, 0.5, -1);
+      const DOWN_BUTTON_POSITION = new THREE.Vector3(-0.65, 0.25, -0.9);
+
+      const PLATFORM_SPEED = 0.5; // Meters/second
+      const MAX_PLATFORM_HEIGHT = 5;
+      const PLATFORM_MOVE_INCREMENT = MAX_PLATFORM_HEIGHT / 2;
 
       let container, stats, controls;
       let camera, scene, renderer;
@@ -83,7 +89,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let scared = false;
       let userStage = null;
       let raisedPlatform = null;
-      let raisedPlatformTransform = new THREE.Matrix4();
+      let stageTargetHeight = 0;
 
       let audioLoader = new THREE.AudioLoader();
       let dinoSceneToAnimationRootTransform = new THREE.Matrix4();
@@ -262,6 +268,28 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         hornButtonDOM.style.top = '3em';
         hornButtonDOM.style.zIndex = '999';
         document.body.appendChild(hornButtonDOM);
+
+        let upButtonDOM = document.createElement('button');
+        upButtonDOM.addEventListener('click', () => {
+          raisePlatform();
+        });
+        upButtonDOM.innerText = 'Raise Platform';
+        upButtonDOM.style.position = 'absolute';
+        upButtonDOM.style.right = '1em';
+        upButtonDOM.style.top = '5em';
+        upButtonDOM.style.zIndex = '999';
+        document.body.appendChild(upButtonDOM);
+
+        let downButtonDOM = document.createElement('button');
+        downButtonDOM.addEventListener('click', () => {
+          lowerPlatform();
+        });
+        downButtonDOM.innerText = 'Lower Platform';
+        downButtonDOM.style.position = 'absolute';
+        downButtonDOM.style.right = '1em';
+        downButtonDOM.style.top = '7em';
+        downButtonDOM.style.zIndex = '999';
+        document.body.appendChild(downButtonDOM);
         
         let x = LEFT_BUTTON_X;
         let y = TOP_ROW_HEIGHT;
@@ -307,6 +335,28 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         hornButton.position.copy(HORN_BUTTON_POSITION);
         hornButton.rotation.x = Math.PI * 0.4;
         userStage.add(hornButton);
+
+        let upButton = buttonManager.createButton({
+          imageUrl: `media/textures/platform-up.png`,
+          title: "Raise Platform",
+          onClick: () => {
+            raisePlatform();
+          },
+        });
+        upButton.position.copy(UP_BUTTON_POSITION);
+        upButton.rotation.x = Math.PI * 0.4;
+        userStage.add(upButton);
+
+        let downButton = buttonManager.createButton({
+          imageUrl: `media/textures/platform-down.png`,
+          title: "Lower Platform",
+          onClick: () => {
+            lowerPlatform();
+          },
+        });
+        downButton.position.copy(DOWN_BUTTON_POSITION);
+        downButton.rotation.x = Math.PI * 0.4;
+        userStage.add(downButton);
       }
 
       function loadSkybox() {
@@ -459,6 +509,26 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         });
       }
 
+      function raisePlatform() {
+        if (userStage.position.y < stageTargetHeight) {
+          return;
+        }
+        stageTargetHeight += PLATFORM_MOVE_INCREMENT;
+        if (stageTargetHeight >  MAX_PLATFORM_HEIGHT) {
+          stageTargetHeight = MAX_PLATFORM_HEIGHT;
+        }
+      }
+
+      function lowerPlatform() {
+        if (userStage.position.y > stageTargetHeight) {
+          return;
+        }
+        stageTargetHeight -= PLATFORM_MOVE_INCREMENT;
+        if (stageTargetHeight < 0) {
+          stageTargetHeight = 0;
+        }
+      }
+
       function scare() {
         if (!hornSound) {
           audioLoader.load('media/sounds/horn.mp3', (buffer) => {
@@ -489,7 +559,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           environmentScene.traverse((child) => {
             if (child.name == 'Raised_Platform') {
               raisedPlatform = child;
-              raisedPlatformTransform.copy(raisedPlatform.parent.matrixWorld);
+              let raisedPlatformTransform = raisedPlatform.parent.matrixWorld;
               raisedPlatform.parent.remove(raisedPlatform);
               raisedPlatform.applyMatrix(raisedPlatformTransform);
               userStage.add(raisedPlatform);
@@ -528,6 +598,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         let delta = clock.getDelta();
         if(mixer) {
           mixer.update(delta);
+        }
+
+        if (userStage.position.y < stageTargetHeight) {
+          userStage.position.y += PLATFORM_SPEED * delta;
+          if (userStage.position.y > stageTargetHeight) {
+            userStage.position.y = stageTargetHeight;
+          }
+        } else if (userStage.position.y > stageTargetHeight) {
+          userStage.position.y -= PLATFORM_SPEED * delta;
+          if (userStage.position.y < stageTargetHeight) {
+            userStage.position.y = stageTargetHeight;
+          }
         }
 
         buttonManager.update(delta);
