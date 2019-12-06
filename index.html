@@ -81,6 +81,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let mixer;
       let currentAction = null;
       let scared = false;
+      let userStage = null;
+      let raisedPlatform = null;
+      let raisedPlatformTransform = new THREE.Matrix4();
 
       let audioLoader = new THREE.AudioLoader();
       let dinoSceneToAnimationRootTransform = new THREE.Matrix4();
@@ -103,6 +106,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           name: 'Stegosaurus',
           path: 'media/models/stegosaurus/',
           height: 2.75,
+          distance: 4.5,
           animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
         velociraptor: {
@@ -142,7 +146,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         brachiosaurus: {
           name: 'Brachiosaurus',
           path: 'media/models/brachiosaurus/',
-          distance: 8,
+          distance: 9,
           height: 13,
           animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
         },
@@ -158,17 +162,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         container = document.createElement('div');
         document.body.appendChild(container);
 
+        scene = new THREE.Scene();
+
+        userStage = new THREE.Group();
+        userStage.position.set(0, 0, 0);
+        scene.add(userStage);
+
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
         camera.position.set(0, 5.0, 5.0);
         camera.add(listener);
-
-        scene = new THREE.Scene();
+        userStage.add(camera);
 
         buildList();
 
         loadSkybox();
-
-        buildEnvironment();
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -183,11 +190,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         controller0 = renderer.vr.getController(0);
 				buttonManager.addController(controller0);
-        scene.add(controller0);
+        userStage.add(controller0);
         
 				controller1 = renderer.vr.getController(1);
 				buttonManager.addController(controller1);
-				scene.add(controller1);
+				userStage.add(controller1);
         
         //
 				let geometry = new THREE.BufferGeometry().setFromPoints([
@@ -284,7 +291,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           } else {
             x += BUTTON_SPACING;
           }
-          scene.add(button);
+          userStage.add(button);
 
           //document.body.appendChild(button.domElement);
         }
@@ -299,7 +306,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         hornButton.scale.multiplyScalar(1.1);
         hornButton.position.copy(HORN_BUTTON_POSITION);
         hornButton.rotation.x = Math.PI * 0.4;
-        scene.add(hornButton);
+        userStage.add(hornButton);
       }
 
       function loadSkybox() {
@@ -322,7 +329,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
             envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
 
-            // Initial model to load
+            // These two need to wait for the envMap to be loaded
+            buildEnvironment();
             loadModel(dinos.ankylosaurus);
 
             pmremGenerator.dispose();
@@ -476,13 +484,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         let loader = new GLTFLoader().setPath('media/models/environment/');
         loader.load('scene.gltf', (gltf) => {
           environmentScene = gltf.scene;
+          environmentScene.updateMatrixWorld();
 
           environmentScene.traverse((child) => {
+            if (child.name == 'Raised_Platform') {
+              raisedPlatform = child;
+              raisedPlatformTransform.copy(raisedPlatform.parent.matrixWorld);
+              raisedPlatform.parent.remove(raisedPlatform);
+              raisedPlatform.applyMatrix(raisedPlatformTransform);
+              userStage.add(raisedPlatform);
+            }
             if (child.isMesh) {
-              child.material.envMap = envMap;
+              //child.material.envMap = envMap;
             }
           });
-
+          
           scene.add(environmentScene);
         });
 
