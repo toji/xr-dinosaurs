@@ -43,11 +43,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         margin: 0;
         touch-action: none;
       }
+
+      .dg.main {
+        position: absolute;
+        z-index: 100;
+        top: 1em;
+        right: 1em;
+      }
     </style>
   </head>
 
   <body>
     <script src="js/third-party/three.js/examples/js/vr/HelioWebXRPolyfill.js"></script>
+    <script src='js/third-party/dat.gui.min.js'></script>
 
     <script type="module">
       import * as THREE from './js/third-party/three.js/build/three.module.js';
@@ -85,7 +93,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let shadowNodes = [];
       let environmentScene;
       let controller0, controller1;
-      let envMap;
+      let skybox, envMap;
       let mixer;
       let currentAction = null;
       let scared = false;
@@ -109,7 +117,53 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       const buttonManager = new XRButtonManager();
 
+      // Debug Settings
+      let debugSettings = {
+        drawSkybox: true,
+        drawEnvironment: true,
+        drawDinosaur: true,
+        drawShadows: true,
+        animate: true,
+
+        dinosaur: 'ankylosaurus',
+        scare: () => { scare(); },
+        raisePlatform: () => { raisePlatform(); },
+        lowerPlatform: () => { lowerPlatform(); }
+      };
+
+      let gui = new dat.GUI();
+
+      let dinoList = {};
+      for (let dino in Dinosaurs) {
+        dinoList[Dinosaurs[dino].name] = dino;
+      }
+
+      gui.add(debugSettings, 'dinosaur', dinoList).onFinishChange(() => {
+        loadModel(Dinosaurs[debugSettings.dinosaur]);
+      });
+      gui.add(debugSettings, 'scare');
+      gui.add(debugSettings, 'raisePlatform');
+      gui.add(debugSettings, 'lowerPlatform');
+
+      let guiRenderingFolder = gui.addFolder('Rendering Options');
+      guiRenderingFolder.add(debugSettings, 'drawSkybox').onFinishChange(() => {
+        if (debugSettings.drawSkybox) {
+          scene.background = skybox;
+        } else {
+          scene.background = null;
+        }
+      });
+      guiRenderingFolder.add(debugSettings, 'drawEnvironment').onFinishChange(() => {
+        environmentScene.visible = debugSettings.drawEnvironment;
+      });
+      guiRenderingFolder.add(debugSettings, 'drawDinosaur').onFinishChange(() => {
+        dinoScene.visible = debugSettings.drawDinosaur;
+      });
+      guiRenderingFolder.add(debugSettings, 'animate');
+
       init();
+
+      document.body.appendChild(gui.domElement);
 
       function init() {
         container = document.createElement('div');
@@ -126,7 +180,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         camera.add(listener);
         userStage.add(camera);
 
-        buildList();
+        buildButtons();
 
         loadSkybox();
 
@@ -193,61 +247,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         renderer.setAnimationLoop(render);
       }
 
-      function buildList() {
-        let dinoList = document.createElement('select');
-        dinoList.addEventListener('change', () => {
-          let dino = Dinosaurs[dinoList.value];
-          loadModel(dino);
-        });
-        dinoList.style.position = 'absolute';
-        dinoList.style.right = '1em';
-        dinoList.style.top = '1em';
-        dinoList.style.zIndex = '999';
-        document.body.appendChild(dinoList);
-
-        let hornButtonDOM = document.createElement('button');
-        hornButtonDOM.addEventListener('click', () => {
-          scare();
-        });
-        hornButtonDOM.innerText = 'Airhorn';
-        hornButtonDOM.style.position = 'absolute';
-        hornButtonDOM.style.right = '1em';
-        hornButtonDOM.style.top = '3em';
-        hornButtonDOM.style.zIndex = '999';
-        document.body.appendChild(hornButtonDOM);
-
-        let upButtonDOM = document.createElement('button');
-        upButtonDOM.addEventListener('click', () => {
-          raisePlatform();
-        });
-        upButtonDOM.innerText = 'Raise Platform';
-        upButtonDOM.style.position = 'absolute';
-        upButtonDOM.style.right = '1em';
-        upButtonDOM.style.top = '5em';
-        upButtonDOM.style.zIndex = '999';
-        document.body.appendChild(upButtonDOM);
-
-        let downButtonDOM = document.createElement('button');
-        downButtonDOM.addEventListener('click', () => {
-          lowerPlatform();
-        });
-        downButtonDOM.innerText = 'Lower Platform';
-        downButtonDOM.style.position = 'absolute';
-        downButtonDOM.style.right = '1em';
-        downButtonDOM.style.top = '7em';
-        downButtonDOM.style.zIndex = '999';
-        document.body.appendChild(downButtonDOM);
-        
+      function buildButtons() {
         let x = LEFT_BUTTON_X;
         let y = TOP_ROW_HEIGHT;
         let z = TOP_ROW_DISTANCE;
         let idx = 0;
         for (let i in Dinosaurs) {
           let dino = Dinosaurs[i];
-          let option = document.createElement('option');
-          option.innerText = dino.name;
-          option.value = i;
-          dinoList.appendChild(option);
 
           let button = buttonManager.createButton({
             imageUrl: `${dino.path}button.png`,
@@ -316,7 +322,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
               magFilter: texture.magFilter
             };
 
-            scene.background = new THREE.WebGLRenderTargetCube(1024, 1024, options).fromEquirectangularTexture(renderer, texture);
+            skybox = new THREE.WebGLRenderTargetCube(1024, 1024, options).fromEquirectangularTexture(renderer, texture);
+            scene.background = skybox;
 
             let pmremGenerator = new PMREMGenerator(scene.background.texture);
             pmremGenerator.update(renderer);
@@ -328,7 +335,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
             // These two need to wait for the envMap to be loaded
             buildEnvironment();
-            loadModel(Dinosaurs.ankylosaurus);
+            loadModel(Dinosaurs[debugSettings.dinosaur]);
 
             pmremGenerator.dispose();
             pmremCubeUVPacker.dispose();
@@ -380,6 +387,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           dinoScene = gltf.scene;
           currentDino = dino;
           shadowNodes = [];
+
+          dinoScene.visible = debugSettings.drawDinosaur;
 
           dinoScene.traverse((child) => {
             if (child.isMesh) {
@@ -588,7 +597,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       function render() {
         let delta = clock.getDelta();
-        if(mixer) {
+        if(mixer && debugSettings.animate) {
           mixer.update(delta);
           updateShadows();
         }
