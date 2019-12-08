@@ -395,7 +395,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           for (let i = 0; i < shadowNodes.length; ++i) {
             if (shadowMeshes.length == i) {
               // Build the shadow mesh
-              let shadowGeometry = new THREE.PlaneBufferGeometry(3, 3);
+              let shadowGeometry = new THREE.PlaneBufferGeometry(1, 1);
               let shadowMaterial = new THREE.MeshBasicMaterial({
                 map: textureLoader.load('media/textures/shadow.png'),
                 transparent: true,
@@ -408,6 +408,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
               shadowMeshes.push(shadowMesh);
             }
             shadowMeshes[i].visible = true;
+            let shadowSize = dino.shadowSize || 3;
+            shadowMeshes[i].scale.set(shadowSize, shadowSize, shadowSize);
           }
 
           for (let i = shadowNodes.length; i < shadowMeshes.length; ++i) {

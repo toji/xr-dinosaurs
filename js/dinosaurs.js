@@ -27,6 +27,23 @@ let Dinosaurs = {
     height: 1.7,
     position: [0, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
+
+    // These are the joints in the dinosaurs skeleton that will have a blob
+    // shadow associated with them. The shadow will appear as a dark fuzzy blob
+    // directly beneath the joint at Y ~= 0 and will be attenuated by the
+    // distance from the ground. In many therapods you can get away with only
+    // adding shadows to the feet, but in the case of something like the
+    // Ankylosaurus, which has a large club on the end of it's tail and a very
+    // low head, we want to add shadow blobs to those as well.
+    shadowNodes: [
+      'Ankylosaurus_L_Toe0_031',
+      'Ankylosaurus_R_Toe0_036',
+      'Ankylosaurus_L_Hand_09',
+      'Ankylosaurus_R_Hand_014',
+      'Ankylosaurus_Tail03_040',
+      'Ankylosaurus_Jaw_018'
+    ],
+    shadowSize: 2.5,
   },
   stegosaurus: {
     name: 'Stegosaurus',
@@ -34,6 +51,15 @@ let Dinosaurs = {
     height: 2.75,
     position: [0, 0, -4.5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
+    shadowNodes: [
+      'Stegosaurus_L_Toe01_030',
+      'Stegosaurus_R_Toe01_035',
+      'Stegosaurus_L_Hand_019',
+      'Stegosaurus_R_Hand_024',
+      'Stegosaurus_Tail03_038',
+      'Stegosaurus_Jaw_08'
+    ],
+    shadowSize: 2.5,
   },
   velociraptor: {
     name: 'Velociraptor',
@@ -41,14 +67,25 @@ let Dinosaurs = {
     height: 1.5,
     position: [0, 0, -4],
     animationSequence: ['Idle', 'Scratch', 'Idle', 'Shake'],
+    // The raptor is small enough that a single blob shadow on the root node
+    // gives us pretty much the results we want.
     shadowNodes: ['Raptor_01']
   },
   triceratops: {
     name: 'Triceratops',
     path: 'media/models/triceratops/',
     height: 2.9,
-    position: [0, 0, -3],
+    position: [0.5, 0, -3.5],
     animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side'],
+    shadowNodes: [
+      'Triceratops_L_Toe0_038',
+      'Triceratops_R_Toe0_042',
+      'Triceratops_L_Hand_023',
+      'Triceratops_R_Hand_028',
+      'Triceratops_Tail03_032',
+      'Triceratops_Jaw_06'
+    ],
+    shadowSize: 2.0,
   },
   parasaurolophus: {
     name: 'Parasaurolophus',
@@ -56,7 +93,11 @@ let Dinosaurs = {
     height: 3,
     position: [1, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
-    shadowNodes: ['Parasaurolophus_L_Toe01_032', 'Parasaurolophus_R_Toe01_037']
+    shadowNodes: [
+      'Parasaurolophus_L_Toe01_032',
+      'Parasaurolophus_R_Toe01_037'
+    ],
+    shadowSize: 2.0,
   },
   pachycephalosaurus: {
     name: 'Pachycephalosaurus',
@@ -64,7 +105,11 @@ let Dinosaurs = {
     height: 3,
     position: [0, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
-    shadowNodes: ['Pachycephalosaurus_L_Toe01_030', 'Pachycephalosaurus_R_Toe01_035']
+    shadowNodes: [
+      'Pachycephalosaurus_L_Toe01_030',
+      'Pachycephalosaurus_R_Toe01_035'
+    ],
+    shadowSize: 2.0,
   },
   trex: {
     name: 'Tyrannosaurus Rex',
@@ -74,7 +119,12 @@ let Dinosaurs = {
     animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side', 'Idle', 'Stomp'],
     animationRoot: '_rootJoint',
     mouthNode: 'TRex Jaw_07',
-    shadowNodes: ['TRex_L_Toe0_037', 'TRex_R_Toe0_043'],
+    shadowNodes: [
+      'TRex_L_Toe01_038',
+      'TRex_R_Toe01_044',
+      'TRex_Tail03_048'
+    ],
+    shadowSize: 4.0,
   },
   brachiosaurus: {
     name: 'Brachiosaurus',
@@ -83,8 +133,15 @@ let Dinosaurs = {
     position: [0, 0, -10],
     orientation: Math.PI * -0.2,
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
-    shadowNodes: ['Brachiosaurus_L_Toe0_031', 'Brachiosaurus_L_Toe01_032', 'Brachiosaurus_R_Toe0_036', 'Brachiosaurus_R_Toe01_037'],
+    shadowNodes: [
+      'Brachiosaurus_L_Toe01_032',
+      'Brachiosaurus_R_Toe01_037',
+      'Brachiosaurus_L_Finger0_010',
+      'Brachiosaurus_R_Finger0_015'
+    ],
+    shadowSize: 4.5,
   },
+  
 };
 
 export default Dinosaurs;
