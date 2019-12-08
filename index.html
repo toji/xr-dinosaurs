@@ -81,7 +81,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       let container, stats, controls;
       let camera, scene, renderer;
-      let dinoScene, animationRoot;
+      let dinoScene, currentDino, animationRoot;
+      let shadowNodes = [];
       let environmentScene;
       let controller0, controller1;
       let envMap;
@@ -92,6 +93,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let raisedPlatform = null;
       let stageTargetHeight = 0;
 
+      let shadowMeshes = [];
+
+      let textureLoader = new THREE.TextureLoader();
       let audioLoader = new THREE.AudioLoader();
       let dinoSceneToAnimationRootTransform = new THREE.Matrix4();
       let clock = new THREE.Clock();
@@ -370,15 +374,45 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         if (dinoScene) {
           scene.remove(dinoScene);
         }
+
         let loader = new GLTFLoader().setPath(dino.path);
         loader.load('scene.gltf', (gltf) => {
           dinoScene = gltf.scene;
+          currentDino = dino;
+          shadowNodes = [];
 
           dinoScene.traverse((child) => {
             if (child.isMesh) {
               child.material.envMap = envMap;
             }
+
+            if (dino.shadowNodes && dino.shadowNodes.includes(child.name)) {
+              shadowNodes.push(child);
+            }
           });
+
+          // Make sure we have an appropriate number of shadow meshes available
+          for (let i = 0; i < shadowNodes.length; ++i) {
+            if (shadowMeshes.length == i) {
+              // Build the shadow mesh
+              let shadowGeometry = new THREE.PlaneBufferGeometry(3, 3);
+              let shadowMaterial = new THREE.MeshBasicMaterial({
+                map: textureLoader.load('media/textures/shadow.png'),
+                transparent: true,
+                depthWrite: false,
+              });
+              let shadowMesh = new THREE.Mesh(shadowGeometry, shadowMaterial);
+              shadowMesh.rotation.x = Math.PI * -0.5;
+              shadowMesh.position.y = 0.06;
+              scene.add(shadowMesh);
+              shadowMeshes.push(shadowMesh);
+            }
+            shadowMeshes[i].visible = true;
+          }
+
+          for (let i = shadowNodes.length; i < shadowMeshes.length; ++i) {
+            shadowMeshes[i].visible = false;
+          }
 
           let bbox = new THREE.Box3().setFromObject(dinoScene);
           let modelScale = dino.height / (bbox.max.y - bbox.min.y);
@@ -408,7 +442,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           // Position feet on the floor
           dinoScene.position.fromArray(dino.position || [0, 0, -3]);
           dinoScene.position.y -= bbox.min.y;
-          //dinoScene.position.z = (dino.distance || 3) * -1;
           dinoScene.rotation.y = dino.orientation || Math.PI * 0.2;
 
           scene.add(dinoScene);
@@ -531,6 +564,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         scene.add(grid);*/
       }
 
+      function updateShadows() {
+        if (!shadowNodes.length) { return; }
+
+        let shadowPosition = new THREE.Vector3();
+        for (let i = 0; i < shadowNodes.length; ++i) {
+          shadowNodes[i].getWorldPosition(shadowPosition);
+          shadowMeshes[i].position.x = shadowPosition.x;
+          shadowMeshes[i].position.z = shadowPosition.z;
+
+          shadowMeshes[i].material.opacity = THREE.Math.lerp(1, .25, shadowPosition.y * 0.75);
+        }
+      }
+
       function onWindowResize() {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -542,6 +588,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         let delta = clock.getDelta();
         if(mixer) {
           mixer.update(delta);
+          updateShadows();
         }
 
         if (userStage.position.y < stageTargetHeight) {

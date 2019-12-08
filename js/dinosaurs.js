@@ -39,8 +39,9 @@ let Dinosaurs = {
     name: 'Velociraptor',
     path: 'media/models/velociraptor/',
     height: 1.5,
-    position: [0, 0, -3],
+    position: [0, 0, -4],
     animationSequence: ['Idle', 'Scratch', 'Idle', 'Shake'],
+    shadowNodes: ['Raptor_01']
   },
   triceratops: {
     name: 'Triceratops',
@@ -55,6 +56,7 @@ let Dinosaurs = {
     height: 3,
     position: [1, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
+    shadowNodes: ['Parasaurolophus_L_Toe01_032', 'Parasaurolophus_R_Toe01_037']
   },
   pachycephalosaurus: {
     name: 'Pachycephalosaurus',
@@ -62,16 +64,17 @@ let Dinosaurs = {
     height: 3,
     position: [0, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
+    shadowNodes: ['Pachycephalosaurus_L_Toe01_030', 'Pachycephalosaurus_R_Toe01_035']
   },
   trex: {
     name: 'Tyrannosaurus Rex',
     path: 'media/models/tyrannosaurus/',
     height: 5.2,
     position: [0, 0, -7],
-    animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side'],
+    animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side', 'Idle', 'Stomp'],
     animationRoot: '_rootJoint',
     mouthNode: 'TRex Jaw_07',
-    footNodes: ['TRex L Toe0_037', 'TRex R Toe0_043']
+    shadowNodes: ['TRex_L_Toe0_037', 'TRex_R_Toe0_043'],
   },
   brachiosaurus: {
     name: 'Brachiosaurus',
@@ -80,6 +83,7 @@ let Dinosaurs = {
     position: [0, 0, -10],
     orientation: Math.PI * -0.2,
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
+    shadowNodes: ['Brachiosaurus_L_Toe0_031', 'Brachiosaurus_L_Toe01_032', 'Brachiosaurus_R_Toe0_036', 'Brachiosaurus_R_Toe01_037'],
   },
 };
 
