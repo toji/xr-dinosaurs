@@ -62,6 +62,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { VRButton } from './js/third-party/three.js/examples/jsm/webxr/VRButton.js';
 
       import { XRButtonManager } from './js/xr-button.js';
+      import Dinosaurs from './js/dinosaurs.js';
 
       // VR Button Layout
       const ROW_LENGTH = 4;
@@ -99,64 +100,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let ambientSounds = null;
       let hornSound = null;
       let hornButton = null;
-
-      let dinos = {
-        ankylosaurus: {
-          name: 'Ankylosaurus',
-          path: 'media/models/ankylosaurus/',
-          height: 1.7,
-          distance: 5,
-          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
-        },
-        stegosaurus: {
-          name: 'Stegosaurus',
-          path: 'media/models/stegosaurus/',
-          height: 2.75,
-          distance: 4.5,
-          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
-        },
-        velociraptor: {
-          name: 'Velociraptor',
-          path: 'media/models/velociraptor/',
-          height: 1.5,
-          animationSequence: ['Idle', 'Scratch', 'Idle', 'Shake'],
-        },
-        triceratops: {
-          name: 'Triceratops',
-          path: 'media/models/triceratops/',
-          height: 2.9,
-          animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side'],
-        },
-        parasaurolophus: {
-          name: 'Parasaurolophus',
-          path: 'media/models/parasaurolophus/',
-          height: 3,
-          distance: 5,
-          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
-        },
-        pachycephalosaurus: {
-          name: 'Pachycephalosaurus',
-          path: 'media/models/pachycephalosaurus/',
-          height: 3,
-          distance: 5,
-          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
-        },
-        trex: {
-          name: 'Tyrannosaurus Rex',
-          path: 'media/models/tyrannosaurus/',
-          height: 5.2, // All heights in meters,
-          distance: 7,
-          animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side'],
-          animationRoot: 'TRex_01'
-        },
-        brachiosaurus: {
-          name: 'Brachiosaurus',
-          path: 'media/models/brachiosaurus/',
-          distance: 9,
-          height: 13,
-          animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
-        },
-      };
 
       let actions = {};
 
@@ -249,7 +192,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       function buildList() {
         let dinoList = document.createElement('select');
         dinoList.addEventListener('change', () => {
-          let dino = dinos[dinoList.value];
+          let dino = Dinosaurs[dinoList.value];
           loadModel(dino);
         });
         dinoList.style.position = 'absolute';
@@ -295,8 +238,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         let y = TOP_ROW_HEIGHT;
         let z = TOP_ROW_DISTANCE;
         let idx = 0;
-        for (let i in dinos) {
-          let dino = dinos[i];
+        for (let i in Dinosaurs) {
+          let dino = Dinosaurs[i];
           let option = document.createElement('option');
           option.innerText = dino.name;
           option.value = i;
@@ -381,13 +324,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
             // These two need to wait for the envMap to be loaded
             buildEnvironment();
-            loadModel(dinos.ankylosaurus);
+            loadModel(Dinosaurs.ankylosaurus);
 
             pmremGenerator.dispose();
             pmremCubeUVPacker.dispose();
         });
 
-        var light = new THREE.HemisphereLight( 0xffffff, 0x444444 );
+        var light = new THREE.HemisphereLight( 0xAAAAAA, 0x448844 );
 				light.position.set( 1, 1, 1 );
 				scene.add( light );
       }
@@ -463,9 +406,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           bbox = new THREE.Box3().setFromObject(dinoScene);
 
           // Position feet on the floor
-          dinoScene.position.y = -bbox.min.y;
-          dinoScene.position.z = (dino.distance || 3) * -1;
-          dinoScene.rotation.y = Math.PI * 0.2;
+          dinoScene.position.fromArray(dino.position || [0, 0, -3]);
+          dinoScene.position.y -= bbox.min.y;
+          //dinoScene.position.z = (dino.distance || 3) * -1;
+          dinoScene.rotation.y = dino.orientation || Math.PI * 0.2;
 
           scene.add(dinoScene);
 
