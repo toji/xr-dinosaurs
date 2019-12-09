@@ -70,6 +70,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { VRButton } from './js/third-party/three.js/examples/jsm/webxr/VRButton.js';
 
       import { XRButtonManager } from './js/xr-button.js';
+      import { InputRay } from './js/input-ray.js';
       import Dinosaurs from './js/dinosaurs.js';
 
       // VR Button Layout
@@ -195,24 +196,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         controls.target.set(0, 1, -4);
         controls.update();
 
+        // VR controller trackings
+        let inputRay = new InputRay();
+        inputRay.scale.z = 2;
+
         controller0 = renderer.vr.getController(0);
+        controller0.add(inputRay.clone());
 				buttonManager.addController(controller0);
         userStage.add(controller0);
         
-				controller1 = renderer.vr.getController(1);
+        controller1 = renderer.vr.getController(1);
+        controller1.add(inputRay.clone());
 				buttonManager.addController(controller1);
 				userStage.add(controller1);
-        
-        //
-				let geometry = new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(0, 0, 0),
-          new THREE.Vector3(0, 0, - 1)
-        ]);
-				let line = new THREE.Line(geometry);
-				line.name = 'line';
-				line.scale.z = 5;
-				controller0.add(line.clone());
-				controller1.add(line.clone());
 
         window.addEventListener('resize', onWindowResize, false);
 

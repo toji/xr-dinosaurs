@@ -24,7 +24,7 @@ let Dinosaurs = {
   ankylosaurus: {
     name: 'Ankylosaurus',
     path: 'media/models/ankylosaurus/',
-    height: 1.7,
+    height: 1.8,
     position: [0, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
 
@@ -48,8 +48,8 @@ let Dinosaurs = {
   stegosaurus: {
     name: 'Stegosaurus',
     path: 'media/models/stegosaurus/',
-    height: 2.75,
-    position: [0, 0, -4.5],
+    height: 4.3,
+    position: [1, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
     shadowNodes: [
       'Stegosaurus_L_Toe01_030',
@@ -61,20 +61,25 @@ let Dinosaurs = {
     ],
     shadowSize: 2.5,
   },
-  velociraptor: {
-    name: 'Velociraptor',
+  raptor: {
+    name: 'Utahraptor',
     path: 'media/models/velociraptor/',
-    height: 1.5,
+    height: 2.0,
     position: [0, 0, -4],
     animationSequence: ['Idle', 'Scratch', 'Idle', 'Shake'],
     // The raptor is small enough that a single blob shadow on the root node
     // gives us pretty much the results we want.
-    shadowNodes: ['Raptor_01']
+    shadowNodes: [
+      'Raptor_L_Toe01_044',
+      'Raptor_R_Toe01_049',
+      'Raptor_Tail03_052',
+    ],
+    shadowSize: 1.5,
   },
   triceratops: {
     name: 'Triceratops',
     path: 'media/models/triceratops/',
-    height: 2.9,
+    height: 3,
     position: [0.5, 0, -3.5],
     animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side'],
     shadowNodes: [
@@ -90,7 +95,7 @@ let Dinosaurs = {
   parasaurolophus: {
     name: 'Parasaurolophus',
     path: 'media/models/parasaurolophus/',
-    height: 3,
+    height: 4,
     position: [1, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
     shadowNodes: [
@@ -114,7 +119,7 @@ let Dinosaurs = {
   trex: {
     name: 'Tyrannosaurus Rex',
     path: 'media/models/tyrannosaurus/',
-    height: 5.2,
+    height: 5,
     position: [0, 0, -7],
     animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side', 'Idle', 'Stomp'],
     animationRoot: '_rootJoint',
@@ -129,7 +134,7 @@ let Dinosaurs = {
   brachiosaurus: {
     name: 'Brachiosaurus',
     path: 'media/models/brachiosaurus/',
-    height: 13,
+    height: 12,
     position: [0, 0, -10],
     orientation: Math.PI * -0.2,
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
