@@ -236,6 +236,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         document.body.appendChild(VRButton.createButton(renderer));
 
         renderer.vr.addEventListener('sessionstart', () => {
+          buttonGroup.visible = true;
+
           // Load and play ambient jungle sounds once the user enters VR.
           if (!ambientSounds) {
             ambientSounds = new THREE.Audio(listener);
@@ -248,8 +250,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           } else {
             ambientSounds.play();
           }
-
-          buttonGroup.visible = true;
         });
 
         renderer.vr.addEventListener('sessionend', () => {
@@ -265,7 +265,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       function buildButtons() {
-        let buttonGroup = new THREE.Group();
+        buttonGroup = new THREE.Group();
         buttonGroup.visible = false;
         userStage.add(buttonGroup);
 
