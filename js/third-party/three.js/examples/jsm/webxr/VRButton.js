@@ -37,7 +37,14 @@ var VRButton = {
 
 			button.onclick = function () {
 
-				device.isPresenting ? device.exitPresent() : device.requestPresent( [ { source: renderer.domElement } ] );
+				device.isPresenting ? device.exitPresent() : device.requestPresent( [ {
+					source: renderer.domElement,
+					attributes: {
+						// Non-standard attribute to enable running at the native device refresh rate
+						// on the Oculus Browser.
+						highRefreshRate: true,
+					}
+				 } ] );
 
 			};
 
@@ -217,7 +224,14 @@ var VRButton = {
 
 			window.addEventListener( 'vrdisplayactivate', function ( event ) {
 
-				event.display.requestPresent( [ { source: renderer.domElement } ] );
+				event.display.requestPresent( [ {
+					source: renderer.domElement,
+					attributes: {
+						// Non-standard attribute to enable running at the native device refresh rate
+						// on the Oculus Browser.
+						highRefreshRate: true,
+					}
+				} ] );
 
 			}, false );
 
