@@ -119,6 +119,7 @@ class XRButton extends THREE.Object3D {
     this.add(this._outlineMesh);
     
     if (options.imageUrl) {
+      this._imageUrl = options.imageUrl;
       this._texture = textureLoader.load(options.imageUrl);
 
       let imageGeometry = new THREE.CircleBufferGeometry(IMAGE_RADIUS, BUTTON_SEGMENTS);
@@ -173,8 +174,10 @@ class XRButton extends THREE.Object3D {
       if (this._title) {
         this._domElement.title = this._title;
       }
-      if(this._texture && this._texture.image) {
-        this._domElement.appendChild(this._texture.image);
+      if(this._imageUrl) {
+        let image = new Image();
+        image.src = this._imageUrl;
+        this._domElement.appendChild(image);
       }
       this._domElement.addEventListener('click', () => { this.click(); });
     }

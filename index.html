@@ -50,6 +50,37 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         top: 1em;
         right: 1em;
       }
+
+      .xr-button-group {
+        position: absolute;
+        z-index: 100;
+        top: 0;
+        left: 0;
+        overflow-x: scroll;
+        overflow-y: hidden; 
+        height: 9em;
+        width: 100%;
+        white-space: nowrap;
+      }
+
+      .xr-button {
+        display: inline-block;
+        width: 8em;
+        height: 8em;
+        padding: 0;
+        margin: 1em;
+        background-color: 0xAA2222;
+        border-radius: 4em;
+        border-width: 0;
+        overflow: hidden;
+        box-shadow: 0 0.4em 0.4em black;
+      }
+      .xr-button img {
+        width: 8em;
+        height: 8em;
+        margin: 0;
+        border-radius: 4em;
+      }
     </style>
   </head>
 
@@ -270,6 +301,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         buttonGroup.visible = false;
         userStage.add(buttonGroup);
 
+        let domButtonGroup = document.createElement('div');
+        domButtonGroup.classList.add('xr-button-group');
+
         let x = LEFT_BUTTON_X;
         let y = TOP_ROW_HEIGHT;
         let z = TOP_ROW_DISTANCE;
@@ -296,7 +330,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           }
           buttonGroup.add(button);
 
-          //document.body.appendChild(button.domElement);
+          if (!debugEnabled) {
+            domButtonGroup.appendChild(button.domElement);
+          }
+        }
+
+        if (!debugEnabled) {
+          document.body.appendChild(domButtonGroup);
         }
 
         let hornButton = buttonManager.createButton({
