@@ -264,8 +264,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         }
 
         let vrButton = VRButton.createButton(renderer);
-        vrButton.style.top = vrButton.style.bottom;
-        vrButton.style.bottom = '';
+        if (!debugEnabled) {
+          vrButton.style.top = vrButton.style.bottom;
+          vrButton.style.bottom = '';
+        }
         document.body.appendChild(vrButton);
 
         renderer.vr.addEventListener('sessionstart', () => {
