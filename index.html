@@ -70,6 +70,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { VRButton } from './js/third-party/three.js/examples/jsm/webxr/VRButton.js';
 
       import { XRDinosaurManager } from './js/xr-dinosaur.js';
+      import { XRBlobShadowManager } from './js/xr-blob-shadow-manager.js';
       import { XRButtonManager } from './js/xr-button.js';
       import { XRInputRay } from './js/xr-input-ray.js';
       import { XRInputCursor } from './js/xr-input-cursor.js';
@@ -95,7 +96,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let camera, scene, renderer;
       let gltfLoader;
       let xrDinosaurManager, xrDinosaur;
-      let shadowNodes = [];
+      let blobShadowManager;
       let environmentScene;
       let controller0, controller1;
       let skybox, envMap;
@@ -106,8 +107,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let raisedPlatform = null;
       let stageTargetHeight = 0;
       let buttonGroup;
-
-      let shadowMeshes = [];
 
       let textureLoader = new THREE.TextureLoader();
       let audioLoader = new THREE.AudioLoader();
@@ -164,6 +163,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       guiRenderingFolder.add(debugSettings, 'drawDinosaur').onFinishChange(() => {
         xrDinosaur.visible = debugSettings.drawDinosaur;
       });
+      guiRenderingFolder.add(debugSettings, 'drawShadows').onFinishChange(() => {
+        blobShadowManager.visible = debugSettings.drawShadows;
+      });
       guiRenderingFolder.add(debugSettings, 'animate');
 
       init();
@@ -187,6 +189,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         gltfLoader = new GLTFLoader();
         xrDinosaurManager = new XRDinosaurManager(gltfLoader);
+        blobShadowManager = new XRBlobShadowManager(textureLoader.load('media/textures/shadow.png'));
+        blobShadowManager.position.y = 0.001; // Position the shadows just a smidge above the ground.
+        scene.add(blobShadowManager);
 
         buildButtons();
 
@@ -373,30 +378,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           xrDinosaur.envMap = envMap;
           scene.add(xrDinosaur);
 
-          // Make sure we have an appropriate number of shadow meshes available
-          for (let i = 0; i < xrDinosaur.shadowNodes.length; ++i) {
-            if (shadowMeshes.length == i) {
-              // Build the shadow mesh
-              let shadowGeometry = new THREE.PlaneBufferGeometry(1, 1);
-              let shadowMaterial = new THREE.MeshBasicMaterial({
-                map: textureLoader.load('media/textures/shadow.png'),
-                transparent: true,
-                depthWrite: false,
-              });
-              let shadowMesh = new THREE.Mesh(shadowGeometry, shadowMaterial);
-              shadowMesh.rotation.x = Math.PI * -0.5;
-              shadowMesh.position.y = 0.06;
-              scene.add(shadowMesh);
-              shadowMeshes.push(shadowMesh);
-            }
-            shadowMeshes[i].visible = true;
-            let shadowSize = definition.shadowSize || 3;
-            shadowMeshes[i].scale.set(shadowSize, shadowSize, shadowSize);
-          }
-
-          for (let i = xrDinosaur.shadowNodes.length; i < shadowMeshes.length; ++i) {
-            shadowMeshes[i].visible = false;
-          }
+          blobShadowManager.shadowNodes = xrDinosaur.shadowNodes;
+          blobShadowManager.shadowSize = definition.shadowSize;
         }).catch((err) => {
           // This will usually happen if a new dino is selected before the
           // previous one finishes loading. Not a cause for concern.
@@ -460,19 +443,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         });
       }
 
-      function updateShadows() {
-        if (!xrDinosaur.shadowNodes.length) { return; }
-
-        let shadowPosition = new THREE.Vector3();
-        for (let i = 0; i < xrDinosaur.shadowNodes.length; ++i) {
-          xrDinosaur.shadowNodes[i].getWorldPosition(shadowPosition);
-          shadowMeshes[i].position.x = shadowPosition.x;
-          shadowMeshes[i].position.z = shadowPosition.z;
-
-          shadowMeshes[i].material.opacity = THREE.Math.lerp(1, .25, shadowPosition.y * 0.75);
-        }
-      }
-
       function onWindowResize() {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -484,7 +454,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         let delta = clock.getDelta();
         if(xrDinosaur && debugSettings.animate) {
           xrDinosaur.update(delta);
-          updateShadows();
+          blobShadowManager.update();
         }
 
         if (userStage.position.y < stageTargetHeight) {
