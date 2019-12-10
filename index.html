@@ -54,7 +54,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       .xr-button-group {
         position: absolute;
         z-index: 100;
-        top: 0;
+        bottom: 0;
         left: 0;
         overflow-x: scroll;
         overflow-y: hidden; 
@@ -263,7 +263,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           container.appendChild(stats.dom);
         }
 
-        document.body.appendChild(VRButton.createButton(renderer));
+        let vrButton = VRButton.createButton(renderer);
+        vrButton.style.top = vrButton.style.bottom;
+        vrButton.style.bottom = '';
+        document.body.appendChild(vrButton);
 
         renderer.vr.addEventListener('sessionstart', () => {
           buttonGroup.visible = true;
