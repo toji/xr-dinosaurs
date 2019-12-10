@@ -69,6 +69,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { PMREMCubeUVPacker } from './js/third-party/three.js/examples/jsm/pmrem/PMREMCubeUVPacker.js';
       import { VRButton } from './js/third-party/three.js/examples/jsm/webxr/VRButton.js';
 
+      import { XRDinosaurManager } from './js/xr-dinosaur.js';
       import { XRButtonManager } from './js/xr-button.js';
       import { XRInputRay } from './js/xr-input-ray.js';
       import { XRInputCursor } from './js/xr-input-cursor.js';
@@ -92,23 +93,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       let container, stats, controls;
       let camera, scene, renderer;
-      let dinoScene, currentDino, animationRoot;
+      let gltfLoader;
+      let xrDinosaurManager, xrDinosaur;
       let shadowNodes = [];
       let environmentScene;
       let controller0, controller1;
       let skybox, envMap;
-      let mixer;
+      let xrDinosaurmixer;
       let currentAction = null;
       let scared = false;
       let userStage = null;
       let raisedPlatform = null;
       let stageTargetHeight = 0;
+      let buttonGroup;
 
       let shadowMeshes = [];
 
       let textureLoader = new THREE.TextureLoader();
       let audioLoader = new THREE.AudioLoader();
-      let dinoSceneToAnimationRootTransform = new THREE.Matrix4();
       let clock = new THREE.Clock();
 
       let listener = new THREE.AudioListener();
@@ -160,7 +162,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         environmentScene.visible = debugSettings.drawEnvironment;
       });
       guiRenderingFolder.add(debugSettings, 'drawDinosaur').onFinishChange(() => {
-        dinoScene.visible = debugSettings.drawDinosaur;
+        xrDinosaur.visible = debugSettings.drawDinosaur;
       });
       guiRenderingFolder.add(debugSettings, 'animate');
 
@@ -182,6 +184,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         camera.position.set(0, 5.0, 5.0);
         camera.add(listener);
         userStage.add(camera);
+
+        gltfLoader = new GLTFLoader();
+        xrDinosaurManager = new XRDinosaurManager(gltfLoader);
 
         buildButtons();
 
@@ -238,19 +243,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           } else {
             ambientSounds.play();
           }
+
+          buttonGroup.visible = true;
         });
 
         renderer.vr.addEventListener('sessionend', () => {
-          // Load and play ambient jungle sounds once the user enters VR.
+          // Stop ambient jungle sounds once the user exits VR.
           if (ambientSounds) {
             ambientSounds.stop();
           }
+
+          buttonGroup.visible = false;
         });
 
         renderer.setAnimationLoop(render);
       }
 
       function buildButtons() {
+        let buttonGroup = new THREE.Group();
+        buttonGroup.visible = false;
+        userStage.add(buttonGroup);
+
         let x = LEFT_BUTTON_X;
         let y = TOP_ROW_HEIGHT;
         let z = TOP_ROW_DISTANCE;
@@ -275,7 +288,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           } else {
             x += BUTTON_SPACING;
           }
-          userStage.add(button);
+          buttonGroup.add(button);
 
           //document.body.appendChild(button.domElement);
         }
@@ -290,7 +303,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         hornButton.scale.multiplyScalar(1.1);
         hornButton.position.copy(HORN_BUTTON_POSITION);
         hornButton.rotation.x = Math.PI * 0.4;
-        userStage.add(hornButton);
+        buttonGroup.add(hornButton);
 
         let upButton = buttonManager.createButton({
           imageUrl: `media/textures/platform-up.png`,
@@ -301,7 +314,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         });
         upButton.position.copy(UP_BUTTON_POSITION);
         upButton.rotation.x = Math.PI * 0.4;
-        userStage.add(upButton);
+        buttonGroup.add(upButton);
 
         let downButton = buttonManager.createButton({
           imageUrl: `media/textures/platform-down.png`,
@@ -312,7 +325,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         });
         downButton.position.copy(DOWN_BUTTON_POSITION);
         downButton.rotation.x = Math.PI * 0.4;
-        userStage.add(downButton);
+        buttonGroup.add(downButton);
       }
 
       function loadSkybox() {
@@ -345,67 +358,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             pmremCubeUVPacker.dispose();
         });
 
-        var light = new THREE.HemisphereLight( 0xAAAAAA, 0x448844 );
-				light.position.set( 1, 1, 1 );
-				scene.add( light );
+        let light = new THREE.HemisphereLight(0xAAAAAA, 0x448844);
+				light.position.set(1, 1, 1);
+				scene.add(light);
       }
 
-      // The models we're using here have an incredibly annoying issue where
-      // many of the animations start with several seconds of "empty" keyframes.
-      // (Just the default pose.) This really should be fixed in the models
-      // themselves, but seeing as how I've been having issues with various
-      // importers/exporters I instead wrote up this quick utility to trim off
-      // all the dead space at the beginning of each track. It's not pretty, but
-      // it works for now.
-      function trimEmptyLeadingKeyframes(animation) {
-        let firstTime = animation.tracks[0].times[0];
-        if (firstTime <= 0) { return; }
-        for (let track of animation.tracks) {
-          let firstTrackTime = track.times[0];
-          if (firstTime > firstTrackTime) {
-            firstTime = firstTrackTime;
-            if (firstTime <= 0) {
-              return;
-            }
+      function loadModel(definition) {
+        xrDinosaurManager.load(definition).then((dinosaur) => {
+          if (xrDinosaur) {
+            scene.remove(xrDinosaur);
           }
-        }
-        
-        // If the animation start time was greater than zero adjust all
-        // track times (and the animation duration) to re-root the animation
-        // at 0.
-        animation.duration -= firstTime;
-        for (let track of animation.tracks) {
-          for (let i = 0; i < track.times.length; ++i) {
-            track.times[i] -= firstTime;
-          }
-        }
-      }
-
-      function loadModel(dino) {
-        if (dinoScene) {
-          scene.remove(dinoScene);
-        }
-
-        let loader = new GLTFLoader().setPath(dino.path);
-        loader.load('scene.gltf', (gltf) => {
-          dinoScene = gltf.scene;
-          currentDino = dino;
-          shadowNodes = [];
-
-          dinoScene.visible = debugSettings.drawDinosaur;
-
-          dinoScene.traverse((child) => {
-            if (child.isMesh) {
-              child.material.envMap = envMap;
-            }
-
-            if (dino.shadowNodes && dino.shadowNodes.includes(child.name)) {
-              shadowNodes.push(child);
-            }
-          });
+          xrDinosaur = dinosaur;
+          xrDinosaur.visible = debugSettings.drawDinosaur;
+          xrDinosaur.envMap = envMap;
+          scene.add(xrDinosaur);
 
           // Make sure we have an appropriate number of shadow meshes available
-          for (let i = 0; i < shadowNodes.length; ++i) {
+          for (let i = 0; i < xrDinosaur.shadowNodes.length; ++i) {
             if (shadowMeshes.length == i) {
               // Build the shadow mesh
               let shadowGeometry = new THREE.PlaneBufferGeometry(1, 1);
@@ -421,83 +390,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
               shadowMeshes.push(shadowMesh);
             }
             shadowMeshes[i].visible = true;
-            let shadowSize = dino.shadowSize || 3;
+            let shadowSize = definition.shadowSize || 3;
             shadowMeshes[i].scale.set(shadowSize, shadowSize, shadowSize);
           }
 
-          for (let i = shadowNodes.length; i < shadowMeshes.length; ++i) {
+          for (let i = xrDinosaur.shadowNodes.length; i < shadowMeshes.length; ++i) {
             shadowMeshes[i].visible = false;
           }
-
-          let bbox = new THREE.Box3().setFromObject(dinoScene);
-          let modelScale = dino.height / (bbox.max.y - bbox.min.y);
-
-          // Scale to a more realistic size in meters
-          dinoScene.children[0].scale.multiplyScalar(modelScale);
-
-          if (dino.animationRoot) {
-            dinoScene.updateMatrixWorld();
-            // Force the default animation root transform to the origin
-            animationRoot = dinoScene.getObjectByName(dino.animationRoot);
-            if (animationRoot) {
-              let rootPos = new THREE.Vector3();
-              animationRoot.getWorldPosition(rootPos);
-
-              // This only works because the models we're using have a couple of
-              // levels of static transform nodes baked into them. If they
-              // didn't we'd have to add a separate layer above the dinoScene.
-              dinoScene.children[0].position.set(-rootPos.x, -rootPos.y, -rootPos.z);
-            }
-          } else {
-            animationRoot = null;
-          }
-
-          bbox = new THREE.Box3().setFromObject(dinoScene);
-
-          // Position feet on the floor
-          dinoScene.position.fromArray(dino.position || [0, 0, -3]);
-          dinoScene.position.y -= bbox.min.y;
-          dinoScene.rotation.y = dino.orientation || Math.PI * 0.2;
-
-          scene.add(dinoScene);
-
-          mixer = new THREE.AnimationMixer(dinoScene);
-
-          let animations = gltf.animations;
-          actions = {};
-          for (let i = 0; i < animations.length; ++i) {
-            let animation = animations[i];
-            trimEmptyLeadingKeyframes(animation);
-            let action = mixer.clipAction(animation);
-            actions[animation.name] = mixer.clipAction(animation);
-            if (animation.name == 'Die' || animation.name == 'Get_Up') {
-              action.loop = THREE.LoopOnce;
-            }
-          }
-
-          let animationIndex = 0;
-          let animationSequence = dino.animationSequence || ['Idle'];
-          function nextAnimation(e) {
-            if (animationRoot) {
-              //dinoScene.applyMatrix(animationRoot.matrixWorld);
-            }
-            if (e.action == actions.Die) {
-              mixer.stopAllAction();
-              scared = false;
-              actions.Get_Up.play();
-              currentAction = actions.Get_Up;
-            } else if (!scared) {
-              mixer.stopAllAction();
-              animationIndex = ++animationIndex % animationSequence.length;
-              currentAction = actions[animationSequence[animationIndex]];
-              currentAction.play();
-            }
-          }
-          mixer.addEventListener('loop', nextAnimation);
-          mixer.addEventListener('finished', nextAnimation);
-
-          currentAction = actions[animationSequence[0]];
-          currentAction.play();
+        }).catch((err) => {
+          // This will usually happen if a new dino is selected before the
+          // previous one finishes loading. Not a cause for concern.
+          console.log(err);
         });
       }
 
@@ -526,24 +429,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           audioLoader.load('media/sounds/horn.mp3', (buffer) => {
             hornSound = new THREE.Audio(listener);
             hornSound.setBuffer(buffer);
-            //hornButton.add(hornSound);
-            //hornSound.setVolume(1.2);
             scare();
           });
         } else {
           hornSound.play();
-
-          if (scared) { return; }
-          scared = true;
-
-          currentAction.crossFadeTo(actions.Die, 0.25);
-          currentAction = actions.Die;
-          actions.Die.play();
+          if (xrDinosaur) { xrDinosaur.scare(); }
         }
       }
 
       function buildEnvironment() {
-        let loader = new GLTFLoader().setPath('media/models/environment/');
+        let loader = gltfLoader.setPath('media/models/environment/');
         loader.load('scene.gltf', (gltf) => {
           environmentScene = gltf.scene;
           environmentScene.updateMatrixWorld();
@@ -566,11 +461,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       function updateShadows() {
-        if (!shadowNodes.length) { return; }
+        if (!xrDinosaur.shadowNodes.length) { return; }
 
         let shadowPosition = new THREE.Vector3();
-        for (let i = 0; i < shadowNodes.length; ++i) {
-          shadowNodes[i].getWorldPosition(shadowPosition);
+        for (let i = 0; i < xrDinosaur.shadowNodes.length; ++i) {
+          xrDinosaur.shadowNodes[i].getWorldPosition(shadowPosition);
           shadowMeshes[i].position.x = shadowPosition.x;
           shadowMeshes[i].position.z = shadowPosition.z;
 
@@ -587,8 +482,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       function render() {
         let delta = clock.getDelta();
-        if(mixer && debugSettings.animate) {
-          mixer.update(delta);
+        if(xrDinosaur && debugSettings.animate) {
+          xrDinosaur.update(delta);
           updateShadows();
         }
 
