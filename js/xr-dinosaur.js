@@ -103,11 +103,15 @@ class XRDinosaur extends THREE.Object3D {
 
     // Recalculate the new, scaled bounds
     bbox = new THREE.Box3().setFromObject(gltf.scene);
+    this._center = new THREE.Vector3();
+    bbox.getCenter(this._center);
 
     // Position feet on the ground
     gltf.scene.position.fromArray(definition.position || DEFAULT_POSITION);
     gltf.scene.position.y -= bbox.min.y;
     gltf.scene.rotation.y = definition.orientation || DEFAULT_ORIENTATION;
+
+    this._center.add(gltf.scene.position);
 
     this.add(gltf.scene);
 
@@ -187,5 +191,9 @@ class XRDinosaur extends THREE.Object3D {
     if (this._mixer) {
       this._mixer.update(delta);
     }
+  }
+
+  get center() {
+    return this._center;
   }
 }

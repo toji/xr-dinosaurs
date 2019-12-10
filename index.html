@@ -74,6 +74,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { XRButtonManager } from './js/xr-button.js';
       import { XRInputRay } from './js/xr-input-ray.js';
       import { XRInputCursor } from './js/xr-input-cursor.js';
+      import { QueryArgs } from './js/query-args.js';
 
       import Dinosaurs from './js/dinosaurs.js';
 
@@ -100,28 +101,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let environmentScene;
       let controller0, controller1;
       let skybox, envMap;
-      let xrDinosaurmixer;
-      let currentAction = null;
-      let scared = false;
-      let userStage = null;
-      let raisedPlatform = null;
+      let buttonManager, buttonGroup;
+      let userStage, raisedPlatform;
       let stageTargetHeight = 0;
-      let buttonGroup;
 
       let textureLoader = new THREE.TextureLoader();
       let audioLoader = new THREE.AudioLoader();
       let clock = new THREE.Clock();
 
       let listener = new THREE.AudioListener();
-      let ambientSounds = null;
-      let hornSound = null;
-      let hornButton = null;
-
-      let actions = {};
-
-      const buttonManager = new XRButtonManager();
+      let ambientSounds, hornSound;
 
       // Debug Settings
+      let debugEnabled = QueryArgs.getBool('debug');
+
       let debugSettings = {
         drawSkybox: true,
         drawEnvironment: true,
@@ -129,48 +122,50 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         drawShadows: true,
         animate: true,
 
-        dinosaur: 'ankylosaurus',
+        dinosaur: QueryArgs.getString('dinosaur', 'ankylosaurus'),
         scare: () => { scare(); },
         raisePlatform: () => { raisePlatform(); },
         lowerPlatform: () => { lowerPlatform(); }
       };
 
-      let gui = new dat.GUI();
+      if (debugEnabled) {
+        let gui = new dat.GUI();
 
-      let dinoList = {};
-      for (let dino in Dinosaurs) {
-        dinoList[Dinosaurs[dino].name] = dino;
+        let dinoList = {};
+        for (let dino in Dinosaurs) {
+          dinoList[Dinosaurs[dino].name] = dino;
+        }
+
+        gui.add(debugSettings, 'dinosaur', dinoList).onFinishChange(() => {
+          loadModel(debugSettings.dinosaur);
+        });
+        gui.add(debugSettings, 'scare');
+        gui.add(debugSettings, 'raisePlatform');
+        gui.add(debugSettings, 'lowerPlatform');
+
+        let guiRenderingFolder = gui.addFolder('Rendering Options');
+        guiRenderingFolder.add(debugSettings, 'drawSkybox').onFinishChange(() => {
+          if (debugSettings.drawSkybox) {
+            scene.background = skybox;
+          } else {
+            scene.background = null;
+          }
+        });
+        guiRenderingFolder.add(debugSettings, 'drawEnvironment').onFinishChange(() => {
+          environmentScene.visible = debugSettings.drawEnvironment;
+        });
+        guiRenderingFolder.add(debugSettings, 'drawDinosaur').onFinishChange(() => {
+          xrDinosaur.visible = debugSettings.drawDinosaur;
+        });
+        guiRenderingFolder.add(debugSettings, 'drawShadows').onFinishChange(() => {
+          blobShadowManager.visible = debugSettings.drawShadows;
+        });
+        guiRenderingFolder.add(debugSettings, 'animate');
+
+        document.body.appendChild(gui.domElement);
       }
 
-      gui.add(debugSettings, 'dinosaur', dinoList).onFinishChange(() => {
-        loadModel(Dinosaurs[debugSettings.dinosaur]);
-      });
-      gui.add(debugSettings, 'scare');
-      gui.add(debugSettings, 'raisePlatform');
-      gui.add(debugSettings, 'lowerPlatform');
-
-      let guiRenderingFolder = gui.addFolder('Rendering Options');
-      guiRenderingFolder.add(debugSettings, 'drawSkybox').onFinishChange(() => {
-        if (debugSettings.drawSkybox) {
-          scene.background = skybox;
-        } else {
-          scene.background = null;
-        }
-      });
-      guiRenderingFolder.add(debugSettings, 'drawEnvironment').onFinishChange(() => {
-        environmentScene.visible = debugSettings.drawEnvironment;
-      });
-      guiRenderingFolder.add(debugSettings, 'drawDinosaur').onFinishChange(() => {
-        xrDinosaur.visible = debugSettings.drawDinosaur;
-      });
-      guiRenderingFolder.add(debugSettings, 'drawShadows').onFinishChange(() => {
-        blobShadowManager.visible = debugSettings.drawShadows;
-      });
-      guiRenderingFolder.add(debugSettings, 'animate');
-
       init();
-
-      document.body.appendChild(gui.domElement);
 
       function init() {
         container = document.createElement('div');
@@ -193,9 +188,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         blobShadowManager.position.y = 0.001; // Position the shadows just a smidge above the ground.
         scene.add(blobShadowManager);
 
-        buildButtons();
-
+        loadEnvironment();
         loadSkybox();
+        buildButtons();
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -206,6 +201,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         controls = new OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 1, -4);
+        controls.maxDistance = 30;
+        controls.maxPolarAngle = Math.PI * 0.49;
         controls.update();
 
         // VR controller trackings
@@ -229,9 +226,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         window.addEventListener('resize', onWindowResize, false);
 
-        // stats
-        stats = new Stats();
-        container.appendChild(stats.dom);
+        if (debugEnabled) {
+          // stats
+          stats = new Stats();
+          container.appendChild(stats.dom);
+        }
 
         document.body.appendChild(VRButton.createButton(renderer));
 
@@ -259,12 +258,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           }
 
           buttonGroup.visible = false;
+          userStage.position.y = 0;
         });
 
         renderer.setAnimationLoop(render);
       }
 
       function buildButtons() {
+        buttonManager = new XRButtonManager();
         buttonGroup = new THREE.Group();
         buttonGroup.visible = false;
         userStage.add(buttonGroup);
@@ -280,7 +281,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             imageUrl: `${dino.path}button.png`,
             title: dino.name,
             onClick: () => {
-              loadModel(dino);
+              loadModel(i);
             },
           });
           button.position.set(x, y, z);
@@ -298,7 +299,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           //document.body.appendChild(button.domElement);
         }
 
-        hornButton = buttonManager.createButton({
+        let hornButton = buttonManager.createButton({
           imageUrl: `media/textures/horn.png`,
           title: "Airhorn",
           onClick: () => {
@@ -354,21 +355,29 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             pmremCubeUVPacker.update(renderer);
 
             envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
-
-            // These two need to wait for the envMap to be loaded
-            buildEnvironment();
-            loadModel(Dinosaurs[debugSettings.dinosaur]);
+            loadModel(debugSettings.dinosaur);
 
             pmremGenerator.dispose();
             pmremCubeUVPacker.dispose();
         });
 
-        let light = new THREE.HemisphereLight(0xAAAAAA, 0x448844);
+        let light = new THREE.HemisphereLight(0xFFFFFF, 0x448844);
 				light.position.set(1, 1, 1);
 				scene.add(light);
       }
 
-      function loadModel(definition) {
+      function updateUrl() {
+        let hashString = `#dinosaur=${debugSettings.dinosaur}`;
+        if (debugEnabled) { hashString += '&debug=1'; }
+
+        window.location.hash = hashString;
+      }
+
+      function loadModel(key) {
+        let definition = Dinosaurs[key];
+        if (!definition) { return; }
+        debugSettings.dinosaur = key;
+        updateUrl();
         xrDinosaurManager.load(definition).then((dinosaur) => {
           if (xrDinosaur) {
             scene.remove(xrDinosaur);
@@ -377,6 +386,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           xrDinosaur.visible = debugSettings.drawDinosaur;
           xrDinosaur.envMap = envMap;
           scene.add(xrDinosaur);
+
+          controls.target.copy(xrDinosaur.center);
+          controls.update();
 
           blobShadowManager.shadowNodes = xrDinosaur.shadowNodes;
           blobShadowManager.shadowSize = definition.shadowSize;
@@ -420,7 +432,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         }
       }
 
-      function buildEnvironment() {
+      function loadEnvironment() {
         let loader = gltfLoader.setPath('media/models/environment/');
         loader.load('scene.gltf', (gltf) => {
           environmentScene = gltf.scene;
@@ -473,7 +485,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         renderer.render(scene, camera);
 
-        stats.update();
+        if (stats) { stats.update(); } 
       }
     </script>
   </body>
