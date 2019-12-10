@@ -70,7 +70,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { VRButton } from './js/third-party/three.js/examples/jsm/webxr/VRButton.js';
 
       import { XRButtonManager } from './js/xr-button.js';
-      import { InputRay } from './js/input-ray.js';
+      import { XRInputRay } from './js/xr-input-ray.js';
+      import { XRInputCursor } from './js/xr-input-cursor.js';
+
       import Dinosaurs from './js/dinosaurs.js';
 
       // VR Button Layout
@@ -197,16 +199,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         controls.update();
 
         // VR controller trackings
-        let inputRay = new InputRay();
+        let inputRay = new XRInputRay();
         inputRay.scale.z = 2;
+
+        let inputCursor = new XRInputCursor();
+        inputCursor.position.z = -2;
 
         controller0 = renderer.vr.getController(0);
         controller0.add(inputRay.clone());
+        controller0.add(inputCursor.clone());
 				buttonManager.addController(controller0);
         userStage.add(controller0);
         
         controller1 = renderer.vr.getController(1);
         controller1.add(inputRay.clone());
+        controller1.add(inputCursor.clone());
 				buttonManager.addController(controller1);
 				userStage.add(controller1);
 

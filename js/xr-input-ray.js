@@ -40,12 +40,12 @@ const RAY_LENGTH = 1.0;
 const RAY_FADE_END = 0.535;
 const RAY_FADE_POINT = 0.5335;
 
-let r = RAY_RADIUS;
-let l = RAY_LENGTH;
-
-export class InputRay extends THREE.Mesh {
+export class XRInputRay extends THREE.Mesh {
   constructor() {
-    // Laser is rendered as cross-shaped beam
+    let r = RAY_RADIUS;
+    let l = RAY_LENGTH;
+
+    // The ray is rendered as cross-shaped beam
     let rayVerts = [
     // X    Y   Z    U    V
       0.0, r, 0.0, 0.0, 1.0,
@@ -120,3 +120,4 @@ export class InputRay extends THREE.Mesh {
     super(geometry, material);
   }
 }
+
