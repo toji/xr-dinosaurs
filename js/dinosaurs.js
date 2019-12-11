@@ -65,7 +65,7 @@ let Dinosaurs = {
     name: 'Utahraptor',
     path: 'media/models/velociraptor/',
     height: 2.0,
-    position: [0, 0, -4],
+    position: [-0.5, 0, -4],
     animationSequence: ['Idle', 'Scratch', 'Idle', 'Shake'],
     // The raptor is small enough that a single blob shadow on the root node
     // gives us pretty much the results we want.

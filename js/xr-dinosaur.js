@@ -58,17 +58,37 @@ function trimEmptyLeadingKeyframes(animation) {
 export class XRDinosaurManager {
   constructor(gltfLoader) {
     this._gltfLoader = gltfLoader;
+    this._definitions = {};
     this._currentDefinition = null;
     this._currentDinosaur = null;
+
+    this._loadedDinosaurs = {};
   }
 
-  load(definition) {
-    return new Promise((resolve, reject) => {
-      if (definition == this._currentDefinition) {
-        // Don't waste time doing duplicate loads
-        resolve(this._currentDinosaur);
-      }
+  set definitions(value) {
+    this._definitions = value;
+  }
 
+  get definitions() {
+    return this._definitions;
+  }
+
+  load(key) {
+    let definition = this._definitions[key];
+    if (!definition) {
+      return Promise.reject(new Error('Invalid key'));
+    }
+    if (definition == this._currentDefinition) {
+      // Don't waste time doing duplicate loads
+      Promise.resolve(this._currentDinosaur);
+    }
+    if (this._loadedDinosaurs[key]) {
+      // Load from cache when we can
+      this._currentDefinition = definition;
+      this._currentDinosaur = this._loadedDinosaurs[key];
+      return Promise.resolve(this._currentDinosaur);
+    }
+    return new Promise((resolve, reject) => {
       this._currentDefinition = definition;
 
       this._gltfLoader.setPath(definition.path);
@@ -78,6 +98,7 @@ export class XRDinosaurManager {
           return;
         } else {
           this._currentDinosaur = new XRDinosaur(definition, gltf);
+          this._loadedDinosaurs[key] = this._currentDinosaur;
           resolve(this._currentDinosaur);
         }
       });

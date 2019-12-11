@@ -215,8 +215,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         gltfLoader = new GLTFLoader();
         xrDinosaurManager = new XRDinosaurManager(gltfLoader);
+        xrDinosaurManager.definitions = Dinosaurs;
         blobShadowManager = new XRBlobShadowManager(textureLoader.load('media/textures/shadow.png'));
-        blobShadowManager.position.y = 0.001; // Position the shadows just a smidge above the ground.
+        blobShadowManager.position.y = 0.003; // Position the shadows just a smidge above the ground.
         scene.add(blobShadowManager);
 
         loadEnvironment();
@@ -273,6 +274,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         renderer.vr.addEventListener('sessionstart', () => {
           buttonGroup.visible = true;
 
+          controller0.visible = true;
+          controller1.visible = true;
+
           // Load and play ambient jungle sounds once the user enters VR.
           if (!ambientSounds) {
             ambientSounds = new THREE.Audio(listener);
@@ -295,6 +299,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           buttonGroup.visible = false;
           userStage.position.y = 0;
+
+          controller0.visible = false;
+          controller1.visible = false;
         });
 
         renderer.setAnimationLoop(render);
@@ -412,21 +419,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       function updateUrl() {
-        let hashString = `#dinosaur=${debugSettings.dinosaur}`;
+        // Turns out this is causing a bug on Oculus browser, so I'm disabling
+        // it for now. Navigating to a bookmarked dinosaur will still work.
+        /*let hashString = `#dinosaur=${debugSettings.dinosaur}`;
         if (debugEnabled) { hashString += '&debug=1'; }
 
-        window.location.hash = hashString;
+        window.location.hash = hashString;*/
       }
 
       function loadModel(key) {
-        let definition = Dinosaurs[key];
-        if (!definition) { return; }
         debugSettings.dinosaur = key;
         updateUrl();
-        xrDinosaurManager.load(definition).then((dinosaur) => {
-          if (xrDinosaur) {
-            scene.remove(xrDinosaur);
-          }
+
+        if (xrDinosaur) {
+          scene.remove(xrDinosaur);
+        }
+
+        xrDinosaurManager.load(key).then((dinosaur) => {
           xrDinosaur = dinosaur;
           xrDinosaur.visible = debugSettings.drawDinosaur;
           xrDinosaur.envMap = envMap;
@@ -436,7 +445,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           controls.update();
 
           blobShadowManager.shadowNodes = xrDinosaur.shadowNodes;
-          blobShadowManager.shadowSize = definition.shadowSize;
+          blobShadowManager.shadowSize = xrDinosaur.definition.shadowSize;
         }).catch((err) => {
           // This will usually happen if a new dino is selected before the
           // previous one finishes loading. Not a cause for concern.
