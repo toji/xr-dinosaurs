@@ -106,7 +106,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { XRBlobShadowManager } from './js/xr-blob-shadow-manager.js';
       import { XRButtonManager } from './js/xr-button.js';
       import { XRInputRay } from './js/xr-input-ray.js';
-      import { XRInputCursor } from './js/xr-input-cursor.js';
+      import { XRInputCursorManager } from './js/xr-input-cursor.js';
       import { QueryArgs } from './js/query-args.js';
 
       import Dinosaurs from './js/dinosaurs.js';
@@ -116,27 +116,32 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       // VR Button Layout
       const ROW_LENGTH = 4;
       const BUTTON_SPACING = 0.25;
-      const TOP_ROW_HEIGHT = 0.5;
-      const TOP_ROW_DISTANCE = -1;
-
       const LEFT_BUTTON_X = (BUTTON_SPACING * (ROW_LENGTH - 1) * -0.5);
-      const HORN_BUTTON_POSITION = new THREE.Vector3(0.65, 0.375, -0.95);
-      const UP_BUTTON_POSITION = new THREE.Vector3(-0.65, 0.5, -1);
-      const DOWN_BUTTON_POSITION = new THREE.Vector3(-0.65, 0.25, -0.9);
+
+      const HORN_BUTTON_POSITION = new THREE.Vector3(0.65, 0, 0);
+      const UP_BUTTON_POSITION = new THREE.Vector3(-0.65, 0, -BUTTON_SPACING * 0.5);
+      const DOWN_BUTTON_POSITION = new THREE.Vector3(-0.65, 0, BUTTON_SPACING * 0.5);
 
       const PLATFORM_SPEED = 0.5; // Meters/second
       const MAX_PLATFORM_HEIGHT = 5;
       const PLATFORM_MOVE_INCREMENT = MAX_PLATFORM_HEIGHT / 2;
 
+      const IDEAL_RELATIVE_BUTTON_HEIGHT = -0.4;
+      const MIN_BUTTON_HEIGHT = 0.3;
+      const MAX_BUTTON_HEIGHT = 1.1;
+      const BUTTON_HEIGHT_DEADZONE = 0.15;
+
       let container, stats, controls;
       let camera, scene, renderer;
+      let viewerProxy;
       let gltfLoader;
       let xrDinosaurManager, xrDinosaur;
       let blobShadowManager;
+      let cursorManager;
       let environmentScene;
       let controller0, controller1;
       let skybox, envMap;
-      let buttonManager, buttonGroup;
+      let buttonManager, buttonGroup, targetButtonGroupHeight;
       let userStage, raisedPlatform;
       let stageTargetHeight = 0;
 
@@ -217,6 +222,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         camera.add(listener);
         userStage.add(camera);
 
+        viewerProxy = new THREE.Object3D();
+        camera.add(viewerProxy);
+
         gltfLoader = new GLTFLoader();
         xrDinosaurManager = new XRDinosaurManager(gltfLoader);
         xrDinosaurManager.definitions = Dinosaurs;
@@ -224,9 +232,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         blobShadowManager.position.y = 0.003; // Position the shadows just a smidge above the ground.
         scene.add(blobShadowManager);
 
+        buttonManager = new XRButtonManager();
+        buttonGroup = new THREE.Group();
+
+        cursorManager = new XRInputCursorManager();
+        scene.add(cursorManager);
+        cursorManager.addCollider(buttonGroup);
+
         loadEnvironment();
         loadSkybox();
-        buildButtons();
+        //buildButtons();
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -237,26 +252,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         controls = new OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 1, -4);
-        controls.maxDistance = 30;
-        controls.maxPolarAngle = Math.PI * 0.49;
+        if (!debugEnabled) {
+          controls.maxDistance = 30;
+          controls.maxPolarAngle = Math.PI * 0.49;
+        }
         controls.update();
 
         // VR controller trackings
         let inputRay = new XRInputRay();
         inputRay.scale.z = 2;
 
-        let inputCursor = new XRInputCursor();
-        inputCursor.position.z = -2;
-
         controller0 = renderer.vr.getController(0);
         controller0.add(inputRay.clone());
-        controller0.add(inputCursor.clone());
 				buttonManager.addController(controller0);
         userStage.add(controller0);
         
         controller1 = renderer.vr.getController(1);
         controller1.add(inputRay.clone());
-        controller1.add(inputCursor.clone());
 				buttonManager.addController(controller1);
 				userStage.add(controller1);
 
@@ -301,7 +313,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             ambientSounds.stop();
           }
 
-          buttonGroup.visible = false;
+          if (!debugEnabled) {
+            buttonGroup.visible = false;
+          }
           userStage.position.y = 0;
 
           controller0.visible = false;
@@ -312,17 +326,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       function buildButtons() {
-        buttonManager = new XRButtonManager();
-        buttonGroup = new THREE.Group();
-        buttonGroup.visible = false;
+        if (!debugEnabled) {
+          buttonGroup.visible = false;
+        }
         userStage.add(buttonGroup);
+
+        buttonGroup.position.y = targetButtonGroupHeight = 0.6;
+        buttonGroup.position.z = -0.9;
+        buttonGroup.rotation.x = Math.PI * 0.3;
 
         let domButtonGroup = document.createElement('div');
         domButtonGroup.classList.add('xr-button-group');
 
         let x = LEFT_BUTTON_X;
-        let y = TOP_ROW_HEIGHT;
-        let z = TOP_ROW_DISTANCE;
+        let y = 0;
+        let z = -BUTTON_SPACING * 0.5;
         let idx = 0;
         for (let i in Dinosaurs) {
           let dino = Dinosaurs[i];
@@ -335,12 +353,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             },
           });
           button.position.set(x, y, z);
-          button.rotation.x = Math.PI * 0.4;
           idx++;
           if (idx % ROW_LENGTH == 0) {
             x = LEFT_BUTTON_X;
-            y -= BUTTON_SPACING;
-            z += 0.1;
+            z += BUTTON_SPACING;
           } else {
             x += BUTTON_SPACING;
           }
@@ -364,7 +380,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         });
         hornButton.scale.multiplyScalar(1.1);
         hornButton.position.copy(HORN_BUTTON_POSITION);
-        hornButton.rotation.x = Math.PI * 0.4;
         buttonGroup.add(hornButton);
 
         let upButton = buttonManager.createButton({
@@ -375,7 +390,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           },
         });
         upButton.position.copy(UP_BUTTON_POSITION);
-        upButton.rotation.x = Math.PI * 0.4;
         buttonGroup.add(upButton);
 
         let downButton = buttonManager.createButton({
@@ -386,8 +400,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           },
         });
         downButton.position.copy(DOWN_BUTTON_POSITION);
-        downButton.rotation.x = Math.PI * 0.4;
         buttonGroup.add(downButton);
+
+        // "Glass" pedestal
+        let glassGeometry = new THREE.BoxBufferGeometry(1.6, 0.05, 0.5);
+        let glassMaterial = new THREE.MeshStandardMaterial({
+          color: 0xAACCFF,
+          envMap: envMap,
+          transparent: true,
+          opacity: 0.3,
+          roughness: 0.1,
+          metalness: 0.0
+        });
+        let glassMesh = new THREE.Mesh(glassGeometry, glassMaterial);
+        glassMesh.position.y = -0.05;
+        buttonGroup.add(glassMesh);
       }
 
       function loadSkybox() {
@@ -412,6 +439,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
             envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
             loadModel(debugSettings.dinosaur);
+            buildButtons();
 
             pmremGenerator.dispose();
             pmremCubeUVPacker.dispose();
@@ -527,6 +555,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           blobShadowManager.update();
         }
 
+        // Update the platform height if needed
         if (userStage.position.y < stageTargetHeight) {
           userStage.position.y += PLATFORM_SPEED * delta;
           if (userStage.position.y > stageTargetHeight) {
@@ -539,7 +568,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           }
         }
 
+        // Update the button height to always stay within a reasonable range of the user's head
+        if (renderer.vr.isPresenting && buttonGroup) {
+          let worldPosition = new THREE.Vector3();
+          viewerProxy.getWorldPosition(worldPosition);
+
+          let idealPosition = Math.max(MIN_BUTTON_HEIGHT,
+                              Math.min(MAX_BUTTON_HEIGHT,
+                                       (worldPosition.y - userStage.position.y) + IDEAL_RELATIVE_BUTTON_HEIGHT));
+          if (Math.abs(idealPosition - buttonGroup.position.y) > BUTTON_HEIGHT_DEADZONE) {
+            targetButtonGroupHeight = idealPosition;
+          }
+
+          // Ease into the target position
+          buttonGroup.position.y += (targetButtonGroupHeight - buttonGroup.position.y) * 0.05;
+        }
+
         buttonManager.update(delta);
+        cursorManager.update([controller0, controller1]);
 
         renderer.render(scene, camera);
 

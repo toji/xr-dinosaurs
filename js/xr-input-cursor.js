@@ -28,8 +28,58 @@ const CURSOR_SHADOW_INNER_OPACITY = 0.75;
 const CURSOR_SHADOW_OUTER_OPACITY = 0.0;
 const CURSOR_OPACITY = 0.9;
 const CURSOR_SEGMENTS = 16;
-const CURSOR_DEFAULT_COLOR = [1.0, 1.0, 1.0, 1.0];
-const CURSOR_DEFAULT_HIDDEN_COLOR = [0.5, 0.5, 0.5, 0.25];
+
+const tmpMatrix = new THREE.Matrix4();
+
+export class XRInputCursorManager extends THREE.Group {
+  constructor() {
+    super();
+    this._raycaster = new THREE.Raycaster();
+
+    this._colliders = [];
+    this._frameCursorCount = 0;
+    this._cursors = [new XRInputCursor()];
+    this._cursors[0].visible = false;
+    this.add(this._cursors[0]);
+  }
+
+  addCollider(collider) {
+    this._colliders.push(collider);
+  }
+
+  update(controllers) {
+    let frameCursorCount = 0;
+
+    for (let controller of controllers) {
+      tmpMatrix.identity().extractRotation(controller.matrixWorld);
+      this._raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+      this._raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tmpMatrix);
+
+      let intersects = this._raycaster.intersectObjects(this._colliders, true);
+      if (intersects && intersects.length) {
+        let cursor;
+        if (this._cursors.length == frameCursorCount) {
+          cursor = this._cursors[0].clone();
+          this.add(cursor);
+          this._cursors.push(cursor);
+        } else {
+          cursor = this._cursors[frameCursorCount];
+        }
+        frameCursorCount++;
+        cursor.position.copy(intersects[0].point);
+        // Move the cursor back along the ray a smidge to prevent intersections
+        cursor.position.x -= this._raycaster.ray.direction.x * 0.01;
+        cursor.position.y -= this._raycaster.ray.direction.y * 0.01;
+        cursor.position.z -= this._raycaster.ray.direction.z * 0.01;
+        cursor.visible = true;
+      }
+    }
+
+    for (let i = frameCursorCount; i < this._cursors.length; ++i) {
+      this._cursors[i].visible = false;
+    }
+  }
+}
 
 export class XRInputCursor extends THREE.Mesh {
   constructor() {
