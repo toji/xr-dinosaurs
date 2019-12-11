@@ -89,6 +89,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <script src='js/third-party/dat.gui.min.js'></script>
 
     <script type="module">
+      import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
+
       import * as THREE from './js/third-party/three.js/build/three.module.js';
 
       import Stats from './js/third-party/three.js/examples/jsm/libs/stats.module.js';
@@ -108,6 +110,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { QueryArgs } from './js/query-args.js';
 
       import Dinosaurs from './js/dinosaurs.js';
+
+      let polyfill = new WebXRPolyfill();
 
       // VR Button Layout
       const ROW_LENGTH = 4;
