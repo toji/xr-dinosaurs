@@ -20,7 +20,7 @@
 
 // All heights, positions, and other distances are in meters.
 
-let Dinosaurs = {
+export let Dinosaurs = {
   ankylosaurus: {
     name: 'Ankylosaurus',
     path: 'media/models/ankylosaurus/',
@@ -148,5 +148,3 @@ let Dinosaurs = {
   },
   
 };
-
-export default Dinosaurs;

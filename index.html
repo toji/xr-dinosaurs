@@ -93,8 +93,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       import * as THREE from './js/third-party/three.js/build/three.module.js';
 
-      import Stats from './js/third-party/three.js/examples/jsm/libs/stats.module.js';
-
       import { OrbitControls } from './js/third-party/three.js/examples/jsm/controls/OrbitControls.js';
       import { GLTFLoader } from './js/third-party/three.js/examples/jsm/loaders/GLTFLoader.js';
       import { RGBELoader } from './js/third-party/three.js/examples/jsm/loaders/RGBELoader.js';
@@ -107,9 +105,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { XRButtonManager } from './js/xr-button.js';
       import { XRInputRay } from './js/xr-input-ray.js';
       import { XRInputCursorManager } from './js/xr-input-cursor.js';
+      import { XRStats } from './js/xr-stats.js';
       import { QueryArgs } from './js/query-args.js';
 
-      import Dinosaurs from './js/dinosaurs.js';
+      import { Dinosaurs } from './js/dinosaurs.js';
 
       let polyfill = new WebXRPolyfill();
 
@@ -266,18 +265,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         controller0.add(inputRay.clone());
 				buttonManager.addController(controller0);
         userStage.add(controller0);
-        
+
         controller1 = renderer.vr.getController(1);
         controller1.add(inputRay.clone());
 				buttonManager.addController(controller1);
 				userStage.add(controller1);
 
+        gltfLoader.setPath('media/models/controller/');
+        gltfLoader.load('controller.gltf', (gltf) => { controller0.add(gltf.scene); });
+        gltfLoader.load('controller-left.gltf', (gltf) => { controller1.add(gltf.scene); });
+
         window.addEventListener('resize', onWindowResize, false);
 
         if (debugEnabled) {
           // stats
-          stats = new Stats();
-          container.appendChild(stats.dom);
+          stats = new XRStats(renderer);
+          //stats.position.y = 2;
+          //scene.add(stats);
         }
 
         let vrButton = VRButton.createButton(renderer);
@@ -292,6 +296,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           controller0.visible = true;
           controller1.visible = true;
+
+          stats.drawOrthographic = false;
+          stats.scale.set(0.1, 0.1, 0.1);
+          stats.position.set(0, -0.07, 0);
+          stats.rotation.set(Math.PI * -0.5, Math.PI, 0);
+          scene.remove(stats);
+          controller0.add(stats);
 
           // Load and play ambient jungle sounds once the user enters VR.
           if (!ambientSounds) {
@@ -317,6 +328,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             buttonGroup.visible = false;
           }
           userStage.position.y = 0;
+
+          stats.drawOrthographic = true;
 
           controller0.visible = false;
           controller1.visible = false;
@@ -519,8 +532,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       function loadEnvironment() {
-        let loader = gltfLoader.setPath('media/models/environment/');
-        loader.load('scene.gltf', (gltf) => {
+        gltfLoader.setPath('media/models/environment/');
+        gltfLoader.load('scene.gltf', (gltf) => {
           environmentScene = gltf.scene;
           environmentScene.updateMatrixWorld();
 

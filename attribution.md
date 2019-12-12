@@ -7,3 +7,4 @@ from [SketchFab](https://sketchfab.com/JoseDiaz).
  - Misty Pines 360 photo by [HDRI Haven](https://hdrihaven.com/hdri/?c=nature&h=misty_pines)
  - "Tree Frog and Bird Sound" audio by [Mike Koenig](http://soundbible.com/540-Tree-Frogs-And-Birds.html)
  - "Car honking" audio by [MickTheMicGuy](https://freesound.org/people/MicktheMicGuy/sounds/434878/)
+ - "[controller](https://poly.google.com/view/cdts4fBVXe7)" model by Jack Brookes is licensed under [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/legalcode).

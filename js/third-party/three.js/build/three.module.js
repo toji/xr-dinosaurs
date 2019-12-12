@@ -23464,6 +23464,8 @@ function WebXRManager( renderer, gl ) {
 
 			if ( inputSource ) {
 
+				controller.inputSource = inputSource;
+
 				var inputPose = frame.getPose( inputSource.targetRaySpace, referenceSpace );
 
 				if ( inputPose !== null ) {
@@ -23476,6 +23478,8 @@ function WebXRManager( renderer, gl ) {
 
 				}
 
+			} else {
+				controller.inputSource = null;
 			}
 
 			controller.visible = false;
