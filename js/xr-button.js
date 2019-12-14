@@ -97,7 +97,7 @@ class XRButton extends THREE.Object3D {
     super();
 
     let buttonGeometry = new THREE.CylinderBufferGeometry(BUTTON_RADIUS, BUTTON_RADIUS, BUTTON_HEIGHT, BUTTON_SEGMENTS);
-    let buttonMaterial = new THREE.MeshStandardMaterial({
+    let buttonMaterial = new THREE.MeshLambertMaterial({
       color: 0xAA2222,
       roughness: 0.8,
       metalness: 0.5

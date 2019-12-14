@@ -240,7 +240,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         loadEnvironment();
         loadSkybox();
-        //buildButtons();
+        buildButtons();
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -417,13 +417,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         // "Glass" pedestal
         let glassGeometry = new THREE.BoxBufferGeometry(1.6, 0.05, 0.5);
-        let glassMaterial = new THREE.MeshStandardMaterial({
+        let glassMaterial = new THREE.MeshLambertMaterial({
           color: 0xAACCFF,
-          envMap: envMap,
           transparent: true,
           opacity: 0.3,
+          /*envMap: envMap,
           roughness: 0.1,
-          metalness: 0.0
+          metalness: 0.0*/
         });
         let glassMesh = new THREE.Mesh(glassGeometry, glassMaterial);
         glassMesh.position.y = -0.05;
@@ -452,7 +452,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
             envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
             loadModel(debugSettings.dinosaur);
-            buildButtons();
 
             pmremGenerator.dispose();
             pmremCubeUVPacker.dispose();
