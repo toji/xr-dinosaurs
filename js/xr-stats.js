@@ -28,7 +28,7 @@ import * as THREE from './third-party/three.js/build/three.module.js';
 const SEGMENTS = 30;
 const MAX_FPS = 90;
 const TEXT_KERNING = 2.0;
-const MAX_CHARACTERS = 10;
+const MAX_CHARACTERS = 6;
 
 const now = (window.performance && performance.now) ? performance.now.bind(performance) : Date.now;
 
@@ -249,8 +249,6 @@ export class XRStats extends THREE.Object3D {
     if (this._lastSegment == SEGMENTS - 1) {
       // If we're updating the last segment we need to do two bufferSubDatas
       // to update the segment and turn the first segment into the progress line.
-      /*this._renderer.updateRenderBuffer(this._fpsVertexBuffer, new Float32Array(updateVerts),
-                                        this._lastSegment * 24 * 4);*/
       this._interleavedBuffer.set(new Float32Array(updateVerts), this._lastSegment * 24);
       updateVerts = [
         segmentToX(0), fpsToY(MAX_FPS), 0.02, color.r, color.g, color.b,
@@ -259,7 +257,6 @@ export class XRStats extends THREE.Object3D {
         segmentToX(.25), fpsToY(0), 0.02, color.r, color.g, color.b,
       ];
       this._interleavedBuffer.set(new Float32Array(updateVerts), 0);
-      //this._renderer.updateRenderBuffer(this._fpsVertexBuffer, new Float32Array(updateVerts), 0);
     } else {
       updateVerts.push(
         segmentToX(this._lastSegment+1), fpsToY(MAX_FPS), 0.02, color.r, color.g, color.b,
@@ -268,8 +265,6 @@ export class XRStats extends THREE.Object3D {
         segmentToX(this._lastSegment+1.25), fpsToY(0), 0.02, color.r, color.g, color.b
       );
       this._interleavedBuffer.set(new Float32Array(updateVerts), this._lastSegment * 24);
-      /*this._renderer.updateRenderBuffer(this._fpsVertexBuffer, new Float32Array(updateVerts),
-                                        this._lastSegment * 24 * 4);*/
     }
 
     this._interleavedBuffer.needsUpdate = true;
@@ -282,42 +277,32 @@ export class XRStats extends THREE.Object3D {
 
 class SevenSegmentText extends THREE.Mesh {
   constructor() {
-    let vertices = [];
-    let indices = [];
-
     const width = 0.5;
     const thickness = 0.25;
 
+    let segmentVerts = [];
     function defineSegment(id, left, top, right, bottom) {
-      let idx = vertices.length / 3;
-      vertices.push(
-        left, top, id,
-        right, top, id,
-        right, bottom, id,
-        left, bottom, id);
+      segmentVerts.push(
+        left, top, 0,
+        right, top, 0,
+        right, bottom, 0,
+        left, bottom, 0);
 
-      indices.push(
-        idx, idx+2, idx+1,
-        idx, idx+3, idx+2);
+      /**/
     }
 
     let characters = {};
     function defineCharacter(c, segments) {
-      let mask = [0, 0, 0, 0];
+      let characterIndices = [];
 
       for (let i = 0; i < segments.length; ++i) {
-        switch (segments[i]) {
-          case 0: mask[0] += 1; break;
-          case 1: mask[1] += 1; break;
-          case 2: mask[2] += 1; break;
-          case 3: mask[3] += 1; break;
-          case 4: mask[0] += 2; break;
-          case 5: mask[1] += 2; break;
-          case 6: mask[2] += 2; break;
-        }
+        let idx = segments[i] * 4;
+        characterIndices.push(
+          idx, idx+2, idx+1,
+          idx, idx+3, idx+2);
       }
 
-      characters[c] = mask;
+      characters[c] = characterIndices;
     }
 
     /* Segment layout is as follows:
@@ -337,6 +322,16 @@ class SevenSegmentText extends THREE.Mesh {
     defineSegment(4, width-thickness, 1, width, -thickness*0.5);
     defineSegment(5, -1, thickness*0.5, -1+thickness, -1);
     defineSegment(6, width-thickness, thickness*0.5, width, -1);
+
+    // Populate a buffer full of all the possible character segments up to the
+    // max number of characters.
+    let vertices = [];
+    for (let i = 0; i < MAX_CHARACTERS; ++i) {
+      let offsetX = i * TEXT_KERNING;
+      for (let j = 0; j < segmentVerts.length; j+=3) {
+        vertices.push(segmentVerts[j] + offsetX, segmentVerts[j+1], segmentVerts[j+2]);
+      }
+    }
 
     defineCharacter('0', [0, 2, 3, 4, 5, 6]);
     defineCharacter('1', [4, 6]);
@@ -359,69 +354,32 @@ class SevenSegmentText extends THREE.Mesh {
     defineCharacter(' ', []);
     defineCharacter('_', [2]); // Used for undefined characters
 
-    let geometry = new THREE.InstancedBufferGeometry();
-    //let geometry = new THREE.BufferGeometry();
-    geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
+    // Populate the index buffer with the maximum number of indices we may ever
+    // need.
+    let indices = [];
+    for (let i = 0; i < MAX_CHARACTERS; ++i) {
+      let indexOffset = (segmentVerts.length / 3) * i;
+      for (let idx of characters['8']) {
+        indices.push(idx + indexOffset);
+      }
+    }
+
+    let geometry = new THREE.BufferGeometry();
+    let indexBuffer = new THREE.BufferAttribute(new Uint16Array(indices), 1)
+    indexBuffer.setUsage(THREE.DynamicDrawUsage);
+    geometry.setIndex(indexBuffer);
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3, false));
 
-    let chars = [];
-    chars.push(0 * TEXT_KERNING, 0, ...characters['0']);
-    chars.push(0 * TEXT_KERNING, 0, ...characters['0']);
-    chars.push(2 * TEXT_KERNING, 0, ...characters[' ']);
-    chars.push(3 * TEXT_KERNING, 0, ...characters['F']);
-    chars.push(4 * TEXT_KERNING, 0, ...characters['P']);
-    chars.push(5 * TEXT_KERNING, 0, ...characters['5']);
-
-    let characterBuffer = new THREE.InstancedInterleavedBuffer( new Float32Array(chars), 6)
-    characterBuffer.setUsage(THREE.DynamicDrawUsage);
-    geometry.setAttribute('offset', new THREE.InterleavedBufferAttribute(characterBuffer, 2, 0));
-    geometry.setAttribute('mask', new THREE.InterleavedBufferAttribute(characterBuffer, 4, 2));
-
-    let material = new THREE.ShaderMaterial({
-      vertexShader: `
-        attribute vec2 offset;
-        attribute vec4 mask;
-        varying float vMask;
-        void main() {
-          int segment = int(position.z);
-          vMask = 0.0;
-          if (segment == 0) {
-            int sm = int(mask[0]);
-            vMask = (sm == 1 || sm == 3) ? 1.0 : 0.0;
-          } else if (segment == 1) {
-            int sm = int(mask[1]);
-            vMask = (sm == 1 || sm == 3) ? 1.0 : 0.0;
-          } else if (segment == 2) {
-            int sm = int(mask[2]);
-            vMask = (sm == 1 || sm == 3) ? 1.0 : 0.0;
-          } else if (segment == 3) {
-            int sm = int(mask[3]);
-            vMask = (sm == 1 || sm == 3) ? 1.0 : 0.0;
-          } else if (segment == 4) {
-            int sm = int(mask[0]);
-            vMask = (sm >= 2) ? 1.0 : 0.0;
-          } else if (segment == 5) {
-            int sm = int(mask[1]);
-            vMask = (sm >= 2) ? 1.0 : 0.0;
-          } else if (segment == 6) {
-            int sm = int(mask[2]);
-            vMask = (sm >= 2) ? 1.0 : 0.0;
-          }
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position.xy + offset, 0.0, 1.0);
-        }`,
-      fragmentShader: `
-        varying float vMask;
-        void main() {
-          if (vMask < 1.0) { discard; }
-          gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
-        }`
+    let material = new THREE.MeshBasicMaterial({
+      color: 0x00FF00
     });
 
     super(geometry, material);
 
-    this._text = '';
     this._characters = characters;
-    this._characterBuffer = characterBuffer;
+    this._indexBuffer = indexBuffer;
+    this._characterIndexStride = segmentVerts.length / 3;
+    this._text = '';
   }
 
   get text() {
@@ -431,20 +389,23 @@ class SevenSegmentText extends THREE.Mesh {
   set text(value) {
     this._text = value;
 
-    let chars = [];
-    for (let i = 0; i < value.length; ++i) {
-      chars.push(i * TEXT_KERNING, 0);
-
-      let mask;
-      if (value[i] in this._characters) {
-        mask = this._characters[value[i]];
+    let indices = this._indexBuffer.array;
+    let i = 0;
+    for (let char = 0; char < value.length && char < MAX_CHARACTERS; ++char) {
+      let indexOffset = char * this._characterIndexStride;
+      let charIndices;
+      if (value[char] in this._characters) {
+        charIndices = this._characters[value[char]];
       } else {
-        mask = this._characters['_'];
+        charIndices = this._characters['_'];
       }
-      chars.push(...mask);
-    }
 
-    this._characterBuffer.array = new Float32Array(chars);
-    this._characterBuffer.needsUpdate = true;
+      for(let idx of charIndices) {
+        indices[i++] = idx + indexOffset;
+      }
+    }
+    this._indexBuffer.needsUpdate = true;
+
+    this.geometry.setDrawRange(0, i);
   }
 }
