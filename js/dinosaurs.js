@@ -146,5 +146,12 @@ export let Dinosaurs = {
     ],
     shadowSize: 4.5,
   },
-  
+  pterodactyl: {
+    name: 'Pterodactyl',
+    path: 'media/models/pterodactyl/',
+    height: 1.8,
+    position: [2, 0, -2],
+    animationSequence: ['Idle', 'Look_Side', 'Take_Off', 'Hovering', 'Fall', 'Land'],
+    debugOnly: true
+  }
 };

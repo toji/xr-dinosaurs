@@ -358,6 +358,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         let idx = 0;
         for (let i in Dinosaurs) {
           let dino = Dinosaurs[i];
+          if (dino.debugOnly) { continue; }
 
           let button = buttonManager.createButton({
             imageUrl: `${dino.path}button.png`,
