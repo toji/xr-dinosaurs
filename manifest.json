@@ -1,0 +1,20 @@
+{
+  "short_name": "XR Dinos",
+  "name": "WebXR Dinosaurs",
+  "icons": [
+    {
+      "src": "media/textures/dino-icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "media/textures/dino-icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "background_color": "#1B9B3B",
+  "display": "fullscreen",
+  "scope": "./",
+  "theme_color": "#1B9B3B"
+}
