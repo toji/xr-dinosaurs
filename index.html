@@ -259,16 +259,32 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         controls.update();
 
         // VR controller trackings
+        function updateControllerVisualization(controller) {
+          let showRay = controller.inputSource &&
+                        controller.inputSource.targetRayMode == 'tracked-pointer';
+          controller.userData.inputRay.visible = showRay;
+        }
+
         let inputRay = new XRInputRay();
         inputRay.scale.z = 2;
 
         controller0 = renderer.vr.getController(0);
-        controller0.add(inputRay.clone());
-				buttonManager.addController(controller0);
+        controller0.userData.inputRay = inputRay.clone();
+        controller0.add(controller0.userData.inputRay);
+        updateControllerVisualization(controller0);
+        controller0.addEventListener('inputsourcechange', () => { 
+          updateControllerVisualization(controller0);
+        });
+        buttonManager.addController(controller0);
         userStage.add(controller0);
 
         controller1 = renderer.vr.getController(1);
-        controller1.add(inputRay.clone());
+        controller1.userData.inputRay = inputRay.clone();
+        controller1.add(controller1.userData.inputRay);
+        updateControllerVisualization(controller1);
+        controller0.addEventListener('inputsourcechange', () => { 
+          updateControllerVisualization(controller1);
+        });
 				buttonManager.addController(controller1);
 				userStage.add(controller1);
 
@@ -279,10 +295,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         window.addEventListener('resize', onWindowResize, false);
 
         if (debugEnabled) {
-          // stats
           stats = new XRStats(renderer);
-          //stats.position.y = 2;
-          //scene.add(stats);
         }
 
         let vrButton = VRButton.createButton(renderer);
@@ -297,13 +310,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           controller0.visible = true;
           controller1.visible = true;
-
-          stats.drawOrthographic = false;
-          stats.scale.set(0.1, 0.1, 0.1);
-          stats.position.set(0, -0.07, 0);
-          stats.rotation.set(Math.PI * -0.5, Math.PI, 0);
-          scene.remove(stats);
-          controller0.add(stats);
+          
+          if (stats) {
+            stats.drawOrthographic = false;
+            stats.scale.set(0.1, 0.1, 0.1);
+            stats.position.set(0, -0.07, 0);
+            stats.rotation.set(Math.PI * -0.5, Math.PI, 0);
+            scene.remove(stats);
+            controller0.add(stats);
+          }
 
           // Load and play ambient jungle sounds once the user enters VR.
           if (!ambientSounds) {
@@ -330,7 +345,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           }
           userStage.position.y = 0;
 
-          stats.drawOrthographic = true;
+          if (stats) {
+            stats.drawOrthographic = true;
+          }
 
           controller0.visible = false;
           controller1.visible = false;

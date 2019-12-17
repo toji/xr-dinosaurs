@@ -20,8 +20,8 @@
 
 import * as THREE from './third-party/three.js/build/three.module.js';
 
-const CURSOR_RADIUS = 0.004;
-const CURSOR_SHADOW_RADIUS = 0.007;
+const CURSOR_RADIUS = 0.006;
+const CURSOR_SHADOW_RADIUS = 0.0085;
 const CURSOR_SHADOW_INNER_LUMINANCE = 0.5;
 const CURSOR_SHADOW_OUTER_LUMINANCE = 0.0;
 const CURSOR_SHADOW_INNER_OPACITY = 0.75;
