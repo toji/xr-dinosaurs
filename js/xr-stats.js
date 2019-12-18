@@ -90,7 +90,7 @@ export class XRStats extends THREE.Object3D {
 
       let idx = i * 4;
       fpsIndices.push(idx, idx+3, idx+1,
-                       idx+3, idx, idx+2);
+                      idx+3, idx, idx+2);
     }
 
     function addBGSquare(left, bottom, right, top, z, r, g, b) {

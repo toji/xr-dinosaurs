@@ -20,54 +20,99 @@
 
 import * as THREE from './third-party/three.js/build/three.module.js';
 
+const MAX_SHADOW_COUNT = 10;
 const DEFAULT_SHADOW_SIZE = 3;
 
 const worldPosition = new THREE.Vector3();
 
-export class XRBlobShadowManager extends THREE.Group {
+export class XRBlobShadowManager extends THREE.Mesh {
   constructor(shadowTexture) {
-    super();
+    let instancedGeometry = new THREE.InstancedBufferGeometry();
 
-    this._shadowTexture = shadowTexture;
-    this._shadowMeshes = [];
+    let shadowVerts = [
+    // X,   Y,  Z,    U, V
+      -0.5, 0, -0.5,  0, 0,
+       0.5, 0, -0.5,  1, 0,
+       0.5, 0,  0.5,  1, 1,
+      -0.5, 0,  0.5,  0, 1,
+    ];
+
+    let shadowIndices = [
+      0, 2, 1,
+      0, 3, 2
+    ];
+
+    let interleavedBuffer = new THREE.InterleavedBuffer(new Float32Array(shadowVerts), 5);
+    instancedGeometry.setIndex(shadowIndices);
+    instancedGeometry.setAttribute('position', new THREE.InterleavedBufferAttribute(interleavedBuffer, 3, 0, false));
+    instancedGeometry.setAttribute('uv', new THREE.InterleavedBufferAttribute(interleavedBuffer, 2, 3, false));
+
+    let shadowOffsets = new THREE.InstancedBufferAttribute(new Float32Array(MAX_SHADOW_COUNT * 4), 4);
+    shadowOffsets.setUsage(THREE.DynamicDrawUsage);
+    instancedGeometry.addAttribute('shadowOffsets', shadowOffsets);
+
+    let blobShadowMaterial = new THREE.RawShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+
+      uniforms: {
+        map: { value: shadowTexture },
+        shadowScale: { value: DEFAULT_SHADOW_SIZE }
+      },
+
+      vertexShader: `
+        precision highp float;
+
+        uniform mat4 modelViewMatrix;
+        uniform mat4 projectionMatrix;
+        uniform float shadowScale;
+
+        attribute vec3 position;
+        attribute vec2 uv;
+        attribute vec4 shadowOffsets;
+
+        varying vec2 vUv;
+        varying float vOpacity;
+
+        void main() {
+          vec3 offset = shadowOffsets.xyz;
+          vOpacity = shadowOffsets.w;
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(offset + (position * shadowScale), 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+
+        uniform sampler2D map;
+
+        varying vec2 vUv;
+        varying float vOpacity;
+
+        void main() {
+          vec4 shadowColor = texture2D(map, vUv);
+          gl_FragColor = vec4(shadowColor.rgb, shadowColor.a * vOpacity);
+        }
+      `
+    });
+
+    super(instancedGeometry, blobShadowMaterial);
+    this.frustumCulled = false;
+
     this._shadowNodes = [];
     this._shadowSize = DEFAULT_SHADOW_SIZE;
+    this._shadowOffsets = shadowOffsets;
   }
 
   set shadowNodes(value) {
     this._shadowNodes = value || [];
-
-    for (let i = 0; i < this._shadowNodes.length; ++i) {
-      if (this._shadowMeshes.length == i) {
-        // Build the shadow mesh
-        let shadowGeometry = new THREE.PlaneBufferGeometry(1, 1);
-        let shadowMaterial = new THREE.MeshBasicMaterial({
-          map: this._shadowTexture,
-          transparent: true,
-          depthWrite: false,
-        });
-        let shadowMesh = new THREE.Mesh(shadowGeometry, shadowMaterial);
-        shadowMesh.rotation.x = Math.PI * -0.5;
-        this.add(shadowMesh);
-        this._shadowMeshes.push(shadowMesh);
-      }
-      this._shadowMeshes[i].visible = true;
-      let shadowSize = this._shadowSize;
-      this._shadowMeshes[i].scale.set(shadowSize, shadowSize, shadowSize);
-    }
-
-    for (let i = this._shadowNodes.length; i < this._shadowMeshes.length; ++i) {
-      this._shadowMeshes[i].visible = false;
-    }
   }
 
   set shadowSize(value) {
     if (!value) { value = DEFAULT_SHADOW_SIZE; }
     if (value != this._shadowSize) {
-      for (let mesh of this._shadowMeshes) {
-        mesh.scale.set(value, value, value);
-      }
       this._shadowSize = value;
+      this.material.uniforms.shadowScale.value = value;
     }
   }
 
@@ -80,10 +125,11 @@ export class XRBlobShadowManager extends THREE.Group {
     for (let i = 0; i < this._shadowNodes.length; ++i) {
       this._shadowNodes[i].getWorldPosition(worldPosition);
 
-      let mesh = this._shadowMeshes[i];
-      mesh.position.x = worldPosition.x;
-      mesh.position.z = worldPosition.z;
-      mesh.material.opacity = THREE.Math.lerp(1, .25, worldPosition.y * 0.75);
+      let opacity = THREE.Math.lerp(1, .25, worldPosition.y * 0.75);
+      this._shadowOffsets.setXYZW(i, worldPosition.x, 0.002, worldPosition.z, opacity);
     }
+
+    this.geometry.maxInstancedCount = this._shadowNodes.length;
+    this._shadowOffsets.needsUpdate = true;
   }
 }
