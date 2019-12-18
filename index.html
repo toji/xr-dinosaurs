@@ -97,11 +97,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import { OrbitControls } from './js/third-party/three.js/examples/jsm/controls/OrbitControls.js';
       import { GLTFLoader } from './js/third-party/three.js/examples/jsm/loaders/GLTFLoader.js';
       import { DRACOLoader } from './js/third-party/three.js/examples/jsm/loaders/DRACOLoader.js';
-      import { RGBELoader } from './js/third-party/three.js/examples/jsm/loaders/RGBELoader.js';
-      import { PMREMGenerator } from './js/third-party/three.js/examples/jsm/pmrem/PMREMGenerator.js';
-      import { PMREMCubeUVPacker } from './js/third-party/three.js/examples/jsm/pmrem/PMREMCubeUVPacker.js';
       import { VRButton } from './js/third-party/three.js/examples/jsm/webxr/VRButton.js';
 
+      import { HDRSkybox } from './js/hdr-skybox.js';
       import { XRDinosaurManager } from './js/xr-dinosaur.js';
       import { XRBlobShadowManager } from './js/xr-blob-shadow-manager.js';
       import { XRButtonManager } from './js/xr-button.js';
@@ -245,7 +243,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         cursorManager.addCollider(buttonGroup);
 
         loadEnvironment();
-        loadSkybox();
         buildButtons();
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -262,6 +259,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           controls.maxPolarAngle = Math.PI * 0.49;
         }
         controls.update();
+
+        let light = new THREE.HemisphereLight(0xFFFFFF, 0x448844);
+				light.position.set(1, 1, 1);
+				scene.add(light);
+
+        skybox = new HDRSkybox(renderer, 'media/textures/equirectangular/', 'misty_pines_2k.hdr');
+        scene.background = skybox;
+
+        skybox.getEnvMap().then((texture) => { 
+          envMap = texture;
+          loadModel(debugSettings.dinosaur);
+        });
 
         // VR controller trackings
         function updateControllerVisualization(controller) {
@@ -452,38 +461,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         let glassMesh = new THREE.Mesh(glassGeometry, glassMaterial);
         glassMesh.position.y = -0.05;
         buttonGroup.add(glassMesh);
-      }
-
-      function loadSkybox() {
-        new RGBELoader()
-          .setDataType(THREE.UnsignedByteType)
-          .setPath('media/textures/equirectangular/')
-          .load('misty_pines_2k.hdr', (texture) => {
-            let options = {
-              generateMipmaps: true,
-              minFilter: THREE.LinearMipmapLinearFilter,
-              magFilter: THREE.LinearFilter
-            };
-
-            skybox = new THREE.WebGLRenderTargetCube(1024, 1024, options).fromEquirectangularTexture(renderer, texture);
-            scene.background = skybox;
-
-            let pmremGenerator = new PMREMGenerator(scene.background.texture);
-            pmremGenerator.update(renderer);
-
-            let pmremCubeUVPacker = new PMREMCubeUVPacker(pmremGenerator.cubeLods);
-            pmremCubeUVPacker.update(renderer);
-
-            envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
-            loadModel(debugSettings.dinosaur);
-
-            pmremGenerator.dispose();
-            pmremCubeUVPacker.dispose();
-        });
-
-        let light = new THREE.HemisphereLight(0xFFFFFF, 0x448844);
-				light.position.set(1, 1, 1);
-				scene.add(light);
       }
 
       function updateUrl() {

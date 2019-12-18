@@ -22,6 +22,7 @@ import * as THREE from './third-party/three.js/build/three.module.js';
 
 const MAX_SHADOW_COUNT = 10;
 const DEFAULT_SHADOW_SIZE = 3;
+const DEFAULT_SHADOW_HEIGHT = 0.005;
 
 const worldPosition = new THREE.Vector3();
 
@@ -126,7 +127,7 @@ export class XRBlobShadowManager extends THREE.Mesh {
       this._shadowNodes[i].getWorldPosition(worldPosition);
 
       let opacity = THREE.Math.lerp(1, .25, worldPosition.y * 0.75);
-      this._shadowOffsets.setXYZW(i, worldPosition.x, 0.002, worldPosition.z, opacity);
+      this._shadowOffsets.setXYZW(i, worldPosition.x, DEFAULT_SHADOW_HEIGHT, worldPosition.z, opacity);
     }
 
     this.geometry.maxInstancedCount = this._shadowNodes.length;
