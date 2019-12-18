@@ -19,7 +19,6 @@
 // SOFTWARE.
 
 import * as THREE from './third-party/three.js/build/three.module.js';
-import { DRACOLoader } from './third-party/three.js/examples/jsm/loaders/DRACOLoader.js';
 
 const DEFAULT_POSITION = [0, 0, -3];
 const DEFAULT_ORIENTATION = Math.PI * 0.2;
@@ -88,11 +87,6 @@ export class XRDinosaurManager {
       this._currentDefinition = definition;
       this._currentDinosaur = this._loadedDinosaurs[key];
       return Promise.resolve(this._currentDinosaur);
-    }
-    if (definition.compressed && !this._gltfLoader.dracoLoader) {
-      let dracoLoader = new DRACOLoader();
-      dracoLoader.setDecoderPath('js/third-party/three.js/examples/js/libs/draco/gltf/');
-      this._gltfLoader.setDRACOLoader(dracoLoader);
     }
     return new Promise((resolve, reject) => {
       this._currentDefinition = definition;

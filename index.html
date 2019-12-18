@@ -96,6 +96,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       import { OrbitControls } from './js/third-party/three.js/examples/jsm/controls/OrbitControls.js';
       import { GLTFLoader } from './js/third-party/three.js/examples/jsm/loaders/GLTFLoader.js';
+      import { DRACOLoader } from './js/third-party/three.js/examples/jsm/loaders/DRACOLoader.js';
       import { RGBELoader } from './js/third-party/three.js/examples/jsm/loaders/RGBELoader.js';
       import { PMREMGenerator } from './js/third-party/three.js/examples/jsm/pmrem/PMREMGenerator.js';
       import { PMREMCubeUVPacker } from './js/third-party/three.js/examples/jsm/pmrem/PMREMCubeUVPacker.js';
@@ -226,6 +227,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         camera.add(viewerProxy);
 
         gltfLoader = new GLTFLoader();
+        let dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('js/third-party/three.js/examples/js/libs/draco/gltf/');
+        gltfLoader.setDRACOLoader(dracoLoader);
+
         xrDinosaurManager = new XRDinosaurManager(gltfLoader);
         xrDinosaurManager.definitions = Dinosaurs;
         blobShadowManager = new XRBlobShadowManager(textureLoader.load('media/textures/shadow.png'));
@@ -552,7 +557,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       function loadEnvironment() {
         gltfLoader.setPath('media/models/environment/');
-        gltfLoader.load('scene.gltf', (gltf) => {
+        gltfLoader.load('compressed.glb', (gltf) => {
           environmentScene = gltf.scene;
           environmentScene.updateMatrixWorld();
 

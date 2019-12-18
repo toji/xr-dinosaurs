@@ -24,6 +24,7 @@ export let Dinosaurs = {
   ankylosaurus: {
     name: 'Ankylosaurus',
     path: 'media/models/ankylosaurus/',
+    file: 'compressed.glb',
     height: 1.8,
     position: [0, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
@@ -48,6 +49,7 @@ export let Dinosaurs = {
   stegosaurus: {
     name: 'Stegosaurus',
     path: 'media/models/stegosaurus/',
+    file: 'compressed.glb',
     height: 4.3,
     position: [1, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
@@ -64,6 +66,7 @@ export let Dinosaurs = {
   raptor: {
     name: 'Utahraptor',
     path: 'media/models/velociraptor/',
+    file: 'compressed.glb',
     height: 2.0,
     position: [-0.5, 0, -4],
     animationSequence: ['Idle', 'Scratch', 'Idle', 'Shake'],
@@ -79,6 +82,7 @@ export let Dinosaurs = {
   triceratops: {
     name: 'Triceratops',
     path: 'media/models/triceratops/',
+    file: 'compressed.glb',
     height: 3,
     position: [0.5, 0, -3.5],
     animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side'],
@@ -95,6 +99,7 @@ export let Dinosaurs = {
   parasaurolophus: {
     name: 'Parasaurolophus',
     path: 'media/models/parasaurolophus/',
+    file: 'compressed.glb',
     height: 4,
     position: [1, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
@@ -107,6 +112,7 @@ export let Dinosaurs = {
   pachycephalosaurus: {
     name: 'Pachycephalosaurus',
     path: 'media/models/pachycephalosaurus/',
+    file: 'compressed.glb',
     height: 3,
     position: [0, 0, -5],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
@@ -119,24 +125,7 @@ export let Dinosaurs = {
   trex: {
     name: 'Tyrannosaurus Rex',
     path: 'media/models/tyrannosaurus/',
-    height: 5,
-    position: [0, 0, -7],
-    animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side', 'Idle', 'Stomp'],
-    animationRoot: '_rootJoint',
-    mouthNode: 'TRex Jaw_07',
-    shadowNodes: [
-      'TRex_L_Toe01_038',
-      'TRex_R_Toe01_044',
-      'TRex_Tail03_048'
-    ],
-    shadowSize: 4.0,
-  },
-  trexCompressed: {
-    debugOnly: true,
-    name: 'Tyrannosaurus Rex (Compressed)',
-    path: 'media/models/tyrannosaurus/',
     file: 'compressed.glb',
-    compressed: true,
     height: 5,
     position: [0, 0, -7],
     animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side', 'Idle', 'Stomp'],
@@ -152,24 +141,7 @@ export let Dinosaurs = {
   brachiosaurus: {
     name: 'Brachiosaurus',
     path: 'media/models/brachiosaurus/',
-    height: 12,
-    position: [0, 0, -10],
-    orientation: Math.PI * -0.2,
-    animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
-    shadowNodes: [
-      'Brachiosaurus_L_Toe01_032',
-      'Brachiosaurus_R_Toe01_037',
-      'Brachiosaurus_L_Finger0_010',
-      'Brachiosaurus_R_Finger0_015'
-    ],
-    shadowSize: 4.5,
-  },
-  brachiosaurusCompressed: {
-    debugOnly: true,
-    name: 'Brachiosaurus (Compressed)',
-    path: 'media/models/brachiosaurus/',
     file: 'compressed.glb',
-    compressed: true,
     height: 12,
     position: [0, 0, -10],
     orientation: Math.PI * -0.2,
@@ -185,6 +157,7 @@ export let Dinosaurs = {
   pterodactyl: {
     name: 'Pterodactyl',
     path: 'media/models/pterodactyl/',
+    file: 'compressed.glb',
     height: 1.8,
     position: [2, 0, -2],
     animationSequence: ['Idle', 'Look_Side', 'Take_Off', 'Hovering', 'Fall', 'Land'],
