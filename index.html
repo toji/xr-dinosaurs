@@ -478,9 +478,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         if (xrDinosaur) {
           scene.remove(xrDinosaur);
+          xrDinosaur = null;
+          blobShadowManager.shadowNodes = [];
         }
 
         xrDinosaurManager.load(key).then((dinosaur) => {
+          if (xrDinosaur) {
+            scene.remove(xrDinosaur);
+            xrDinosaur = null;
+          }
+
           xrDinosaur = dinosaur;
           xrDinosaur.visible = debugSettings.drawDinosaur;
           xrDinosaur.envMap = envMap;
