@@ -122,6 +122,13 @@ class XRButton extends THREE.Object3D {
       this._imageUrl = options.imageUrl;
       this._texture = textureLoader.load(options.imageUrl);
 
+      if (options.imageOffset) {
+        this._texture.offset.x = options.imageOffset[0];
+        this._texture.offset.y = 1.0 - (options.imageOffset[1]+0.25);
+        this._texture.repeat.x = 0.25;
+        this._texture.repeat.y = 0.25;
+      }
+
       let imageGeometry = new THREE.CircleBufferGeometry(IMAGE_RADIUS, BUTTON_SEGMENTS);
       let imageMaterial = new THREE.MeshBasicMaterial({
         color: 0xFFFFFF,
@@ -143,6 +150,8 @@ class XRButton extends THREE.Object3D {
     this._onHoverStart = options.onHoverStart;
     this._onHoverEnd = options.onHoverEnd;
     this._hoveredFrame = 0;
+    this._imageOffset = options.imageOffset;
+    this._imageSize = options.imageSize;
   }
 
   get hovered() {
@@ -174,11 +183,11 @@ class XRButton extends THREE.Object3D {
       if (this._title) {
         this._domElement.title = this._title;
       }
-      if(this._imageUrl) {
-        let image = new Image();
-        image.src = this._imageUrl;
-        this._domElement.appendChild(image);
-      }
+      this.domElement.style = `
+      background-image: url('${this._imageUrl}');
+      background-repeat: no-repeat;
+      background-position: -${this._imageOffset[0] * 512}px -${this._imageOffset[1] * 512}px;
+      `;
       this._domElement.addEventListener('click', () => { this.click(); });
     }
     return this._domElement;

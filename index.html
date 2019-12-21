@@ -59,28 +59,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         left: 0;
         overflow-x: scroll;
         overflow-y: hidden; 
-        height: 9em;
         width: 100%;
         white-space: nowrap;
       }
 
       .xr-button {
         display: inline-block;
-        width: 7em;
-        height: 7em;
+        width: 128px;
+        height: 128px;
         padding: 0;
-        margin: 1em;
+        margin: 0.5em;
         background-color: 0xAA2222;
-        border-radius: 3.5em;
+        border-radius: 128px;
         border-width: 0;
         overflow: hidden;
         box-shadow: 0 0.4em 0.4em black;
-      }
-      .xr-button img {
-        width: 7em;
-        height: 7em;
-        margin: 0;
-        border-radius: 3.5em;
+        background-repeat: no-repeat;
+        background-size: 400%;
       }
     </style>
   </head>
@@ -392,7 +387,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           if (dino.debugOnly) { continue; }
 
           let button = buttonManager.createButton({
-            imageUrl: `${dino.path}button.png`,
+            imageUrl: `media/textures/button-atlas.png`,
+            imageOffset: dino.buttonAtlasOffset ? dino.buttonAtlasOffset : [0, 0],
+            imageSize: dino.buttonAtlasSize ? dino.buttonAtlasSize : [256, 256],
             title: dino.name,
             onClick: () => {
               loadModel(i);

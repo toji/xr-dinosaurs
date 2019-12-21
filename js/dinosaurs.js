@@ -55,7 +55,7 @@ export let Dinosaurs = {
     file: 'compressed.glb',
     height: 4.3,
     position: [1, 0, -5],
-    buttonAtlasOffset: [0, 256],
+    buttonAtlasOffset: [0, 0.25],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
     shadowNodes: [
       'Stegosaurus_L_Toe01_030',
@@ -74,7 +74,7 @@ export let Dinosaurs = {
     file: 'compressed.glb',
     height: 2.0,
     position: [-0.5, 0, -4],
-    buttonAtlasOffset: [768, 256],
+    buttonAtlasOffset: [0.75, 0.25],
     animationSequence: ['Idle', 'Scratch', 'Idle', 'Shake'],
     // The raptor is small enough that a single blob shadow on the root node
     // gives us pretty much the results we want.
@@ -92,7 +92,7 @@ export let Dinosaurs = {
     file: 'compressed.glb',
     height: 2.8,
     position: [0.5, 0, -3.5],
-    buttonAtlasOffset: [256, 256],
+    buttonAtlasOffset: [0.25, 0.25],
     animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side'],
     shadowNodes: [
       'Triceratops_L_Toe0_038',
@@ -111,7 +111,7 @@ export let Dinosaurs = {
     file: 'compressed.glb',
     height: 4,
     position: [1, 0, -5],
-    buttonAtlasOffset: [768, 0],
+    buttonAtlasOffset: [0.75, 0],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
     shadowNodes: [
       'Parasaurolophus_L_Toe01_032',
@@ -126,7 +126,7 @@ export let Dinosaurs = {
     file: 'compressed.glb',
     height: 3,
     position: [0, 0, -5],
-    buttonAtlasOffset: [512, 0],
+    buttonAtlasOffset: [0.5, 0],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
     shadowNodes: [
       'Pachycephalosaurus_L_Toe01_030',
@@ -141,7 +141,7 @@ export let Dinosaurs = {
     file: 'compressed.glb',
     height: 5,
     position: [0, 0, -7],
-    buttonAtlasOffset: [512, 256],
+    buttonAtlasOffset: [0.5, 0.25],
     animationSequence: ['Idle', 'Look_Back', 'Idle', 'Look_Side', 'Idle', 'Stomp'],
     animationRoot: '_rootJoint',
     mouthNode: 'TRex Jaw_07',
@@ -160,7 +160,7 @@ export let Dinosaurs = {
     height: 12,
     position: [0, 0, -10],
     orientation: Math.PI * -0.2,
-    buttonAtlasOffset: [256, 0],
+    buttonAtlasOffset: [0.25, 0],
     animationSequence: ['Idle', 'Idle_2', 'Idle_3'],
     shadowNodes: [
       'Brachiosaurus_L_Toe01_032',
@@ -176,7 +176,7 @@ export let Dinosaurs = {
     file: 'compressed.glb',
     height: 1.8,
     position: [2, 0, -2],
-    buttonAtlasOffset: [0, 512],
+    buttonAtlasOffset: [0, 0.5],
     animationSequence: ['Idle', 'Look_Side', 'Take_Off', 'Hovering', 'Fall', 'Land'],
     debugOnly: true
   }
