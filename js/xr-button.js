@@ -151,7 +151,6 @@ class XRButton extends THREE.Object3D {
     this._onHoverEnd = options.onHoverEnd;
     this._hoveredFrame = 0;
     this._imageOffset = options.imageOffset;
-    this._imageSize = options.imageSize;
   }
 
   get hovered() {

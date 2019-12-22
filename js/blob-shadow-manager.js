@@ -26,7 +26,7 @@ const DEFAULT_SHADOW_HEIGHT = 0.005;
 
 const worldPosition = new THREE.Vector3();
 
-export class XRBlobShadowManager extends THREE.Mesh {
+export class BlobShadowManager extends THREE.Mesh {
   constructor(shadowTexture) {
     let instancedGeometry = new THREE.InstancedBufferGeometry();
 
