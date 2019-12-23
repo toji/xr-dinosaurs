@@ -77,6 +77,7 @@ let debugSettings = {
   drawEnvironment: true,
   drawDinosaur: true,
   drawShadows: true,
+  drawButtons: true,
   animate: true,
 
   dinosaur: 'ankylosaurus',
@@ -128,6 +129,9 @@ function initDebugUI() {
   guiRenderingFolder.add(debugSettings, 'drawShadows').onFinishChange(() => {
     blobShadowManager.visible = debugSettings.drawShadows;
   });
+  guiRenderingFolder.add(debugSettings, 'drawButtons').onFinishChange(() => {
+    buttonGroup.visible = debugSettings.drawButtons;
+  });
   guiRenderingFolder.add(debugSettings, 'animate');
 
   document.body.appendChild(gui.domElement);
@@ -154,7 +158,6 @@ export function InitDinosaurApp(debug) {
   xrDinosaurManager = new XRDinosaurManager(gltfLoader);
   xrDinosaurManager.definitions = Dinosaurs;
   blobShadowManager = new BlobShadowManager(textureLoader.load('media/textures/shadow.png'));
-  blobShadowManager.position.y = 0.003; // Position the shadows just a smidge above the ground.
   scene.add(blobShadowManager);
 
   environment = new PenEnvironment(gltfLoader);

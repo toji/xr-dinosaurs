@@ -22,7 +22,7 @@ import * as THREE from './third-party/three.js/build/three.module.js';
 
 const MAX_SHADOW_COUNT = 10;
 const DEFAULT_SHADOW_SIZE = 3;
-const DEFAULT_SHADOW_HEIGHT = 0.005;
+const DEFAULT_SHADOW_HEIGHT = 0.008;
 
 const worldPosition = new THREE.Vector3();
 
