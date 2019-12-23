@@ -68,6 +68,9 @@ let clock = new THREE.Clock();
 let listener = new THREE.AudioListener();
 let ambientSounds, hornSound;
 
+let screenshotList;
+let takeScreenshot = false;
+
 let debugEnabled = false;
 let debugSettings = {
   drawSkybox: true,
@@ -77,10 +80,20 @@ let debugSettings = {
   animate: true,
 
   dinosaur: 'ankylosaurus',
+  screenshot: () => { screenshot(); },
   scare: () => { scare(); },
   raisePlatform: () => { environment.raisePlatform(); },
   lowerPlatform: () => { environment.lowerPlatform(); }
 };
+
+function screenshot() {
+  if (!screenshotList) {
+    screenshotList = document.createElement('div');
+    screenshotList.classList.add('screenshot-list');
+    document.body.appendChild(screenshotList);
+  }
+  takeScreenshot = true;
+}
 
 function initDebugUI() {
   let gui = new dat.GUI();
@@ -94,6 +107,7 @@ function initDebugUI() {
     loadModel(debugSettings.dinosaur);
   });
   gui.add(debugSettings, 'scare');
+  gui.add(debugSettings, 'screenshot');
   gui.add(debugSettings, 'raisePlatform');
   gui.add(debugSettings, 'lowerPlatform');
 
@@ -475,7 +489,20 @@ function render() {
   buttonManager.update(delta);
   cursorManager.update([controller0, controller1]);
 
+  if (takeScreenshot) {
+    renderer.setPixelRatio(window.devicePixelRatio * 2);
+  }
+
   renderer.render(scene, camera);
 
-  if (stats) { stats.update(); } 
+  if (takeScreenshot) {
+    let img = new Image();
+    img.src = renderer.domElement.toDataURL();
+    img.classList.add('screenshot');
+    screenshotList.appendChild(img);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    takeScreenshot = false;
+  }
+
+  if (stats) { stats.update(); }
 }
