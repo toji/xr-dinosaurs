@@ -184,8 +184,9 @@ export function InitDinosaurApp(debug) {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.gammaOutput = true;
-  renderer.vr.enabled = true;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+	//renderer.physicallyCorrectLights = true;
+  renderer.xr.enabled = true;
   container.appendChild(renderer.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
@@ -201,39 +202,40 @@ export function InitDinosaurApp(debug) {
   scene.add(light);
 
   skybox = new HDRSkybox(renderer, 'media/textures/equirectangular/', 'misty_pines_2k.hdr');
-  scene.background = skybox;
-
-  skybox.getEnvMap().then((texture) => { 
+  skybox.getEnvMap().then((texture) => {
     envMap = texture;
+    scene.background = envMap;
     loadModel(debugSettings.dinosaur);
   });
 
   // VR controller trackings
-  function updateControllerVisualization(controller) {
-    let showRay = controller.inputSource &&
-                  controller.inputSource.targetRayMode == 'tracked-pointer';
+  function updateControllerVisualization(controller, inputSource) {
+    let showRay = inputSource &&
+                  inputSource.targetRayMode == 'tracked-pointer';
     controller.userData.inputRay.visible = showRay;
   }
 
   let inputRay = new XRInputRay();
   inputRay.scale.z = 2;
 
-  controller0 = renderer.vr.getController(0);
+  controller0 = renderer.xr.getController(0);
   controller0.userData.inputRay = inputRay.clone();
   controller0.add(controller0.userData.inputRay);
-  updateControllerVisualization(controller0);
-  controller0.addEventListener('inputsourcechange', () => { 
-    updateControllerVisualization(controller0);
+  updateControllerVisualization(controller0, null);
+  controller0.addEventListener('connected', (event) => {
+    updateControllerVisualization(controller0, event.data);
   });
   buttonManager.addController(controller0);
   environment.platform.add(controller0);
 
-  controller1 = renderer.vr.getController(1);
+  
+
+  controller1 = renderer.xr.getController(1);
   controller1.userData.inputRay = inputRay.clone();
   controller1.add(controller1.userData.inputRay);
   updateControllerVisualization(controller1);
-  controller0.addEventListener('inputsourcechange', () => { 
-    updateControllerVisualization(controller1);
+  controller0.addEventListener('connected', (event) => {
+    updateControllerVisualization(controller1, event.data);
   });
   buttonManager.addController(controller1);
   environment.platform.add(controller1);
@@ -255,11 +257,11 @@ export function InitDinosaurApp(debug) {
   }
   document.body.appendChild(vrButton);
 
-  renderer.vr.addEventListener('sessionstart', () => {
+  renderer.xr.addEventListener('sessionstart', () => {
     buttonGroup.visible = true;
 
-    controller0.visible = true;
-    controller1.visible = true;
+    //controller0.visible = true;
+    //controller1.visible = true;
     
     if (stats) {
       stats.drawOrthographic = false;
@@ -284,7 +286,7 @@ export function InitDinosaurApp(debug) {
     }
   });
 
-  renderer.vr.addEventListener('sessionend', () => {
+  renderer.xr.addEventListener('sessionend', () => {
     // Stop ambient jungle sounds once the user exits VR.
     if (ambientSounds) {
       ambientSounds.stop();
@@ -299,8 +301,8 @@ export function InitDinosaurApp(debug) {
       stats.drawOrthographic = true;
     }
 
-    controller0.visible = false;
-    controller1.visible = false;
+    //controller0.visible = false;
+    //controller1.visible = false;
   });
 
   renderer.setAnimationLoop(render);
@@ -474,7 +476,7 @@ function render() {
   environment.update(delta);
 
   // Update the button height to always stay within a reasonable range of the user's head
-  if (renderer.vr.isPresenting && buttonGroup) {
+  if (renderer.xr.isPresenting && buttonGroup) {
     let worldPosition = new THREE.Vector3();
     viewerProxy.getWorldPosition(worldPosition);
 

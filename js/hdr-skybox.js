@@ -20,49 +20,25 @@
 
 import * as THREE from './third-party/three.js/build/three.module.js';
 import { RGBELoader } from './third-party/three.js/examples/jsm/loaders/RGBELoader.js';
-import { PMREMGenerator } from './third-party/three.js/examples/jsm/pmrem/PMREMGenerator.js';
-import { PMREMCubeUVPacker } from './third-party/three.js/examples/jsm/pmrem/PMREMCubeUVPacker.js';
 
-const SKYBOX_SIZE = 1024;
-
-export class HDRSkybox extends THREE.WebGLRenderTargetCube {
+export class HDRSkybox {
   constructor(renderer, path, file) {
-    let options = {
-      generateMipmaps: true,
-      minFilter: THREE.LinearMipmapLinearFilter,
-      magFilter: THREE.LinearFilter
-    };
-    super(SKYBOX_SIZE, SKYBOX_SIZE, options);
+    let pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
 
-    this._renderer = renderer;
-    this._envMapPromise = null;
-    this._texturePromise = new Promise((resolve, reject) => {
+    this._envMapPromise = new Promise((resolve, reject) => {;
       let rgbeLoader = new RGBELoader();
       rgbeLoader.setDataType(THREE.UnsignedByteType);
       rgbeLoader.setPath(path);
-      rgbeLoader.load(file,  (texture) => {
-        this.fromEquirectangularTexture(this._renderer, texture);
-        resolve();
+      rgbeLoader.load(file, (texture) => {
+        let envMap = pmremGenerator.fromEquirectangular(texture).texture;
+				pmremGenerator.dispose();
+        resolve(envMap);
       });
     });
   }
 
   getEnvMap() {
-    if (!this._envMapPromise) {
-      this._envMapPromise = this._texturePromise.then(() => {
-        let pmremGenerator = new PMREMGenerator(this.texture);
-        pmremGenerator.update(this._renderer);
-
-        let pmremCubeUVPacker = new PMREMCubeUVPacker(pmremGenerator.cubeLods);
-        pmremCubeUVPacker.update(this._renderer);
-
-        let envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
-        pmremGenerator.dispose();
-        pmremCubeUVPacker.dispose();
-
-        return envMap;
-      });
-    }
     return this._envMapPromise;
   }
 }
