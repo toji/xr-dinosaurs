@@ -41,15 +41,31 @@ export class PenEnvironment extends THREE.Group {
       this._scene = gltf.scene;
       this._scene.updateMatrixWorld();
 
+      let raisedPlatform = null;
       this._scene.traverse((child) => {
+        if (child.isMesh) {
+          // Replace the MeshStandardMaterial for the pen with something cheaper
+          // to render, because we don't have proper physical materials for this
+          // model.
+          let newMaterial = new THREE.MeshLambertMaterial({
+            map: child.material.map,
+            alphaMap: child.material.alphaMap,
+            transparent: child.material.transparent,
+            side: child.material.side,
+          });
+          child.material = newMaterial;
+        }
         if (child.name == 'Raised_Platform') {
-          let raisedPlatform = child;
-          let raisedPlatformTransform = raisedPlatform.parent.matrixWorld;
-          raisedPlatform.parent.remove(raisedPlatform);
-          raisedPlatform.applyMatrix(raisedPlatformTransform);
-          this._platform.add(raisedPlatform);
+          raisedPlatform = child;
         }
       });
+
+      if (raisedPlatform) {
+        let raisedPlatformTransform = raisedPlatform.parent.matrixWorld;
+        raisedPlatform.parent.remove(raisedPlatform);
+        raisedPlatform.applyMatrix(raisedPlatformTransform);
+        this._platform.add(raisedPlatform);
+      }
       
       this.add(this._scene);
     });
