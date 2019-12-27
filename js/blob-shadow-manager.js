@@ -50,7 +50,7 @@ export class BlobShadowManager extends THREE.Mesh {
 
     let shadowOffsets = new THREE.InstancedBufferAttribute(new Float32Array(MAX_SHADOW_COUNT * 4), 4);
     shadowOffsets.setUsage(THREE.DynamicDrawUsage);
-    instancedGeometry.addAttribute('shadowOffsets', shadowOffsets);
+    instancedGeometry.setAttribute('shadowOffsets', shadowOffsets);
 
     let blobShadowMaterial = new THREE.RawShaderMaterial({
       transparent: true,
