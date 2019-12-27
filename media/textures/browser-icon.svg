@@ -1,0 +1,11 @@
+<svg version="1.1" id="view_x5F_in_x5F_AR_x5F_icon"
+  xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="55px" height="55px"
+  viewBox="0 0 24 24" enable-background="new 0 0 24 24" xml:space="preserve">
+  <rect id="Bounding_Box" x="0" y="0" fill="none" width="24" height="24"/>
+  <g id="Art_layer" fill="rgb(80,168,252)">
+    <path d="M3,4c0-0.55,0.45-1,1-1h2V1H4C2.35,1,1,2.35,1,4v2h2V4z"/>
+    <path d="M20,3c0.55,0,1,0.45,1,1v2h2V4c0-1.65-1.35-3-3-3h-2v2H20z"/>
+    <path d="M4,21c-0.55,0-1-0.45-1-1v-2H1v2c0,1.65,1.35,3,3,3h2v-2H4z"/>
+    <path d="M20,21c0.55,0,1-0.45,1-1v-2h2v2c0,1.65-1.35,3-3,3h-2v-2H20z"/>
+  </g>
+</svg>

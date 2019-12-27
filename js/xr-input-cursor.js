@@ -51,6 +51,7 @@ export class XRInputCursorManager extends THREE.Group {
     let frameCursorCount = 0;
 
     for (let controller of controllers) {
+      if (!controller) continue;
       tmpMatrix.identity().extractRotation(controller.matrixWorld);
       this._raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
       this._raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tmpMatrix);

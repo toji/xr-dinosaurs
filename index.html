@@ -34,64 +34,67 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <title>WebXR Dinosaurs</title>
   </head>
 
-  <body class='dont-hide-landing-page'>
+  <body>
     <script src="js/third-party/three.js/examples/js/vr/HelioWebXRPolyfill.js"></script>
     <script src='js/third-party/dat.gui.min.js'></script>
 
-    <header>
-      <h1>XR Dinosaurs</h1>
-      <section>
-        <h2>Welcome to the best virtual Dinosaur Park on the web!</h2>
-        <p>We've used the magic of your browser to bring back a friendly pack of prehistoric pals.</p>
-        <p>Our dinosaurs can be viewed with a variety of Virtual Reality headsets, Augmented Reality
-           headset and phones, or directly in your browser.</p>
-      </section>
-    </header>
+    <article id='landingPage'>
+      <header>
+        <h1>XR Dinosaurs</h1>
+        <section>
+          <h2>Welcome to the web's virtual Dinosaur Park!</h2>
+          <p>We've used the magic of your browser to bring back a friendly pack of prehistoric pals.</p>
+          <p>Our dinosaurs can be viewed with a variety of Virtual Reality headsets, Augmented Reality
+            headsets and phones, or directly in your browser.</p>
+        </section>
+      </header>
 
-    <main class='loading'>
-      <div class='lds-ellipsis'>
-        <div></div><div></div><div></div><div></div>
-      </div>
-      <ul class='main-menu'>
-        <li id='view2DButton'>
-          See the Dinosaurs in your Browser.
-        </li>
-        <li class='disabled' id='viewVRButton'>
-          Visit our Dinosaurs in Virtual Reality.
-        </li>
-        <li class='disabled' id='viewARButton'>
-          Bring a Dinosaur home with Augmented Reality.
-        </li>
-      </ul>
-    </main>
-
-    <footer>
-      <div class='webxr-experience'>
-        XR Dinosaurs is a<br/>
-        <a href='https://immersiveweb.dev/'>WebXR Experience</a>
-      </div>
-
-      <div class='credits'>
-        <a class='source-link' href='https://github.com/toji/xr-dinosaurs'>
-          Get the source on GitHub
-        </a>
-        Brought to you with the help of:
-        <ul>
-          <li><a href='https://threejs.org/'>Three.js</a></li>
-          <li><a href='https://www.khronos.org/gltf/'>glTF</a></li>
-          <li><a href='https://google.github.io/draco/'>Draco</a></li>
-          <li><a href='http://workshop.chromeexperiments.com/examples/gui/'>dat.gui</a></li>
+      <main class='loading'>
+        <div class='lds-ellipsis'>
+          <div></div><div></div><div></div><div></div>
+        </div>
+        <ul class='main-menu'>
+          <li id='view2DButton'>
+            See the Dinosaurs in your Browser.
+          </li>
+          <li class='disabled' id='viewVRButton'>
+            Visit our Dinosaurs in Virtual Reality.
+          </li>
+          <li class='disabled' id='viewARButton'>
+            Bring a Dinosaur home with Augmented Reality.
+            <p>Coming Soon</p>
+          </li>
         </ul>
-      </div>
+      </main>
 
-      <h3>Rawr!</h3>
-    </footer>
+      <footer>
+        <div class='webxr-experience'>
+          XR Dinosaurs is a<br/>
+          <a href='https://immersiveweb.dev/'>WebXR Experience</a>
+        </div>
+
+        <div class='credits'>
+          <a class='source-link' href='https://github.com/toji/xr-dinosaurs'>
+            Get the source on GitHub
+          </a>
+          Brought to you with the help of:
+          <ul>
+            <li><a href='https://threejs.org/'>Three.js</a></li>
+            <li><a href='https://www.khronos.org/gltf/'>glTF</a></li>
+            <li><a href='https://google.github.io/draco/'>Draco</a></li>
+            <li><a href='http://workshop.chromeexperiments.com/examples/gui/'>dat.gui</a></li>
+          </ul>
+        </div>
+
+        <h3>Rawr!</h3>
+      </footer>
+    </article>
 
     <script type="module">
       import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
       import { QueryArgs } from './js/query-args.js';
 
-      import { InitDinosaurApp } from './js/dinosaur-app.js';
+      import { PreloadDinosaurApp, RunDinosaurApp } from './js/dinosaur-app.js';
 
       // Initialized the polyfill unless specifically srequested not to.
       if (QueryArgs.getBool('polyfill', true)) {
@@ -103,20 +106,63 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       let mainElement = document.querySelector('main');
 
-      function preload() {
-        // Fake some loading time
-        return new Promise((resolve) => {
-          setTimeout(resolve, 2000);
-        });
-      }
+      let view2DButton = document.getElementById('view2DButton');
+      let viewVRButton = document.getElementById('viewVRButton');
+      let viewARButton = null; //document.getElementById('viewARButton');
+
+      view2DButton.addEventListener('click', () => {
+        RunDinosaurApp();
+      });
+
+      viewVRButton.addEventListener('click', () => {
+        RunDinosaurApp('immersive-vr');
+      });
 
       // Begin loading the app
-      preload().then(() => {
+      PreloadDinosaurApp(debug).then(() => {
+        // When the app's primary resources are ready to display, show the
+        // main menu buttons.
         mainElement.classList.remove('loading');
       });
 
-      // Start the app.
-      //InitDinosaurApp(debug);
+      // Check to see if WebXR is available
+      if ( 'xr' in navigator ) {
+        if (viewVRButton) {
+          navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+            if (supported) {
+              viewVRButton.classList.remove('disabled');
+            } else {
+              let errorMessage = document.createElement('p');
+              errorMessage.innerText = 'Your browser supports WebXR, but Virtual Reality is not available';
+              viewVRButton.appendChild(errorMessage);
+            }
+          });
+        }
+
+        if (viewARButton) {
+          navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+            if (supported) {
+              viewARButton.classList.remove('disabled');
+            } else {
+              let errorMessage = document.createElement('p');
+              errorMessage.innerText = 'Your browser supports WebXR, but Augmented Reality is not available';
+              viewARButton.appendChild(errorMessage);
+            }
+          });
+        }
+      } else {
+        if (viewVRButton) {
+          let errorMessage = document.createElement('p');
+          errorMessage.innerText = 'Your browser does not support WebXR';
+          viewVRButton.appendChild(errorMessage);
+        }
+
+        if (viewARButton) {
+          let errorMessage = document.createElement('p');
+          errorMessage.innerText = 'Your browser does not support WebXR';
+          viewARButton.appendChild(errorMessage);
+        }
+      }
     </script>
   </body>
 </html>

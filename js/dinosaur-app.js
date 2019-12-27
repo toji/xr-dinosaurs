@@ -49,6 +49,7 @@ const MIN_BUTTON_HEIGHT = 0.3;
 const MAX_BUTTON_HEIGHT = 1.1;
 const BUTTON_HEIGHT_DEADZONE = 0.15;
 
+let preloadPromise, vrButton, appRunning = false;
 let container, stats, controls;
 let camera, scene, renderer;
 let viewerProxy;
@@ -137,15 +138,54 @@ function initDebugUI() {
   document.body.appendChild(gui.domElement);
 }
 
-export function InitDinosaurApp(debug) {
-  debugEnabled = debug;
-
-  if (debugEnabled) {
-    initDebugUI();
+function initControllers() {
+  if (controller0) {
+    return;
   }
 
+  // VR controller trackings
+  function updateControllerVisualization(controller, inputSource) {
+    let showRay = inputSource &&
+                  inputSource.targetRayMode == 'tracked-pointer';
+    controller.userData.inputRay.visible = showRay;
+  }
+
+  let inputRay = new XRInputRay();
+  inputRay.scale.z = 2;
+
+  controller0 = renderer.xr.getController(0);
+  controller0.userData.inputRay = inputRay.clone();
+  controller0.add(controller0.userData.inputRay);
+  updateControllerVisualization(controller0, null);
+  controller0.addEventListener('connected', (event) => {
+    updateControllerVisualization(controller0, event.data);
+  });
+  buttonManager.addController(controller0);
+  environment.platform.add(controller0);
+
+  controller1 = renderer.xr.getController(1);
+  controller1.userData.inputRay = inputRay.clone();
+  controller1.add(controller1.userData.inputRay);
+  updateControllerVisualization(controller1);
+  controller0.addEventListener('connected', (event) => {
+    updateControllerVisualization(controller1, event.data);
+  });
+  buttonManager.addController(controller1);
+  environment.platform.add(controller1);
+
+  gltfLoader.setPath('media/models/controller/');
+  gltfLoader.load('controller.gltf', (gltf) => { controller0.add(gltf.scene); });
+  gltfLoader.load('controller-left.gltf', (gltf) => { controller1.add(gltf.scene); });
+}
+
+export function PreloadDinosaurApp(debug = false) {
+  if (preloadPromise) {
+    return preloadPromise;
+  }
+
+  debugEnabled = debug;
+
   container = document.createElement('div');
-  document.body.appendChild(container);
 
   scene = new THREE.Scene();
 
@@ -179,15 +219,14 @@ export function InitDinosaurApp(debug) {
   viewerProxy = new THREE.Object3D();
   camera.add(viewerProxy);
 
-  buildButtons();
-
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputEncoding = THREE.sRGBEncoding;
-	//renderer.physicallyCorrectLights = true;
+  //renderer.physicallyCorrectLights = true;
   renderer.xr.enabled = true;
-  container.appendChild(renderer.domElement);
+
+  window.addEventListener('resize', onWindowResize, false);
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 1, -4);
@@ -201,68 +240,22 @@ export function InitDinosaurApp(debug) {
   light.position.set(1, 1, 1);
   scene.add(light);
 
-  skybox = new HDRSkybox(renderer, 'media/textures/equirectangular/', 'misty_pines_2k.hdr');
-  skybox.getEnvMap().then((texture) => {
-    envMap = texture;
-    scene.background = envMap;
-    loadModel(debugSettings.dinosaur);
-  });
-
-  // VR controller trackings
-  function updateControllerVisualization(controller, inputSource) {
-    let showRay = inputSource &&
-                  inputSource.targetRayMode == 'tracked-pointer';
-    controller.userData.inputRay.visible = showRay;
-  }
-
-  let inputRay = new XRInputRay();
-  inputRay.scale.z = 2;
-
-  controller0 = renderer.xr.getController(0);
-  controller0.userData.inputRay = inputRay.clone();
-  controller0.add(controller0.userData.inputRay);
-  updateControllerVisualization(controller0, null);
-  controller0.addEventListener('connected', (event) => {
-    updateControllerVisualization(controller0, event.data);
-  });
-  buttonManager.addController(controller0);
-  environment.platform.add(controller0);
-
-  
-
-  controller1 = renderer.xr.getController(1);
-  controller1.userData.inputRay = inputRay.clone();
-  controller1.add(controller1.userData.inputRay);
-  updateControllerVisualization(controller1);
-  controller0.addEventListener('connected', (event) => {
-    updateControllerVisualization(controller1, event.data);
-  });
-  buttonManager.addController(controller1);
-  environment.platform.add(controller1);
-
-  gltfLoader.setPath('media/models/controller/');
-  gltfLoader.load('controller.gltf', (gltf) => { controller0.add(gltf.scene); });
-  gltfLoader.load('controller-left.gltf', (gltf) => { controller1.add(gltf.scene); });
-
-  window.addEventListener('resize', onWindowResize, false);
-
   if (debugEnabled) {
     stats = new XRStats(renderer);
   }
 
-  let vrButton = VRButton.createButton(renderer);
+  vrButton = VRButton.createButton(renderer);
   if (!debugEnabled) {
     vrButton.style.top = vrButton.style.bottom;
     vrButton.style.bottom = '';
   }
-  document.body.appendChild(vrButton);
+  container.appendChild(vrButton);
 
   renderer.xr.addEventListener('sessionstart', () => {
+    initControllers();
+
     buttonGroup.visible = true;
 
-    //controller0.visible = true;
-    //controller1.visible = true;
-    
     if (stats) {
       stats.drawOrthographic = false;
       stats.scale.set(0.1, 0.1, 0.1);
@@ -300,12 +293,50 @@ export function InitDinosaurApp(debug) {
     if (stats) {
       stats.drawOrthographic = true;
     }
-
-    //controller0.visible = false;
-    //controller1.visible = false;
   });
 
-  renderer.setAnimationLoop(render);
+  skybox = new HDRSkybox(renderer, 'media/textures/equirectangular/', 'misty_pines_2k.hdr');
+  preloadPromise = skybox.getEnvMap().then((texture) => {
+    envMap = texture;
+    scene.background = envMap;
+    return loadModel(debugSettings.dinosaur);
+  });
+
+  return preloadPromise;
+}
+
+export function RunDinosaurApp(xrSessionMode = null) {
+  if (!appRunning) {
+    // Hide the landing page.
+    let landingPage = document.getElementById('landingPage');
+    landingPage.style.display = 'none';
+
+    // Ensure the app content has been loaded (will early terminate if already
+    // called).
+    PreloadDinosaurApp();
+
+    // Build out some final bits of UI
+    if (debugEnabled) {
+      initDebugUI();
+    }
+
+    buildButtons();
+
+    // Attach the main WebGL canvas and supporting UI to the page
+    container.appendChild(renderer.domElement);
+    document.body.appendChild(container);
+
+    // Start the render loop
+    renderer.setAnimationLoop(render);
+
+    appRunning = true;
+  }
+
+  // If the app was requested to start up immediately into a given XR session
+  // mode, do so now.
+  if (xrSessionMode) {
+    vrButton.onclick();
+  }
 }
 
 function buildButtons() {
@@ -423,7 +454,7 @@ function loadModel(key) {
     blobShadowManager.shadowNodes = [];
   }
 
-  xrDinosaurManager.load(key).then((dinosaur) => {
+  return xrDinosaurManager.load(key).then((dinosaur) => {
     if (xrDinosaur) {
       scene.remove(xrDinosaur);
       xrDinosaur = null;

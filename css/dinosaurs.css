@@ -124,7 +124,8 @@ header h2 {
 main {
   padding: 0;
   margin: 1em;
-  background-color: rgba(0.3, 0.3, 0.3, 0.8);
+  background-color: rgba(0.3, 0.3, 0.3, 0.7);
+  border-radius: 5px;
   max-height: 1000px;
   overflow: hidden;
   transition: all 1s;
@@ -160,12 +161,55 @@ main.loading>.lds-ellipsis {
 .main-menu>li {
   display: block;
   font-size: 1.8em;
-  border: 1px solid grey;
-  padding-left: 4em;
-  padding-right: 1em;
-  padding-top: 0.5em;
-  padding-bottom: 0.5em;
+  padding: 0.5em;
   min-height: 3em;
+  transition: color 0.5s;
+}
+
+.main-menu>li>p {
+  font-size: 0.6em;
+}
+
+.main-menu>li:hover {
+  cursor: pointer;
+  color: rgb(80,168,252);
+}
+
+.main-menu>li:not(:last-child) {
+  border-bottom: 1px solid grey;
+}
+
+.main-menu>li:before {
+  margin-right: 0.5em;
+  width: 3em;
+} 
+
+.main-menu>li.disabled {
+  color: rgb(90,90,90);
+}
+
+.main-menu>li.disabled:hover {
+  color: rgb(80,80,120);
+}
+
+#view2DButton:before {
+  content: url('../media/textures/browser-icon.svg');
+}
+
+#viewVRButton:before {
+  content: url('../media/textures/vr-icon.svg');
+}
+
+#viewVRButton.disabled:before {
+  content: url('../media/textures/vr-error-icon.svg');
+}
+
+#viewARButton:before {
+  content: url('../media/textures/ar-icon.svg');
+}
+
+#viewARButton.disabled:before {
+  content: url('../media/textures/ar-error-icon.svg');
 }
 
 footer {
@@ -174,12 +218,6 @@ footer {
   padding: 1em;
   margin: 0;
   height: 10em;
-
-  background-image: url('../media/textures/splash.jpg');
-  background-attachment: fixed;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
 }
 
 .webxr-experience {
