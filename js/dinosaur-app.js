@@ -254,7 +254,9 @@ export function PreloadDinosaurApp(debug = false) {
   renderer.xr.addEventListener('sessionstart', () => {
     initControllers();
 
-    buttonGroup.visible = true;
+    if (!debugEnabled) {
+      buttonGroup.visible = true;
+    }
 
     if (stats) {
       stats.drawOrthographic = false;

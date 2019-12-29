@@ -37,7 +37,7 @@ export class PenEnvironment extends THREE.Group {
     this._scene = null;
 
     gltfLoader.setPath('media/models/environment/');
-    gltfLoader.load('compressed.glb', (gltf) => {
+    gltfLoader.load('compressed-optimized.glb', (gltf) => {
       this._scene = gltf.scene;
       this._scene.updateMatrixWorld();
 
