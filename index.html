@@ -38,7 +38,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <script src="js/third-party/three.js/examples/js/vr/HelioWebXRPolyfill.js"></script>
     <script src='js/third-party/dat.gui.min.js'></script>
 
-    <article id='landingPage'>
+    <article id='landingPage' class='not-hidden'>
       <header>
         <h1>XR Dinosaurs</h1>
         <section>
@@ -53,7 +53,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         <div class='lds-ellipsis'>
           <div></div><div></div><div></div><div></div>
         </div>
-        <ul class='main-menu'>
+        <ul class='menu main-menu'>
           <li id='view2DButton'>
             See the Dinosaurs in your Browser.
           </li>
@@ -90,13 +90,68 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       </footer>
     </article>
 
+    <article id='dinosaurSelection' class='hidden'>
+      
+      <ul id='dinosaurList' class='menu'>
+        <li data-dinosaur='ankylosaurus'>
+          Anklyosaurus
+          <p>She may be covered in spikes, but our Ankylosaur is actually quite cuddly
+          and loves to meet new friends! Think of her as a big, prehistoric puppy.</p>
+        </li>
+        <li data-dinosaur='stegosaurus'>
+          Stegosaurus
+          <p>Strong and proud, the Stegosaurus is one of our more popular dinosaurs.
+          Her favorite thing is getting her plates scrubbed clean so they stay such
+          a beautiful, shiny red.</p>
+        </li>
+        <li data-dinosaur='raptor'>
+          Utahraptor
+          <p>You've probably heard these smart dinosaurs called "Velociraptors", but
+          those were actually quite small. Our Utahraptor is much closer in size to
+          the dinosaurs you know and love from the big screen.</p>
+        </li>
+        <li data-dinosaur='triceratops'>
+          Triceratops
+          <p>Our youngest dinosaur, this juvenile Triceratops is a smaller than a
+          full grown adult would be. Spunky and playful, she loves being the center
+          of attention.</p>
+        </li>
+        <li data-dinosaur='parasaurolophus'>
+          Parasaurolophus
+          <p>Our Parasaurolophus is a mischevious, silly dinosaur. The long crest on
+          her head acts like a trumpet, which she loves using to surprise park guests.</p>
+        </li>
+        <li data-dinosaur='pachycephalosaurus'>
+          Pachycephalosaurus
+          <p>This sweet "Pachy" is one of our older dinosaurs. She's a bit shy and
+          gets nervous around new people, but is incredibly gentle.</p>
+        </li>
+        <li data-dinosaur='trex'>
+          Tyrannosaurus Rex
+          <p>Don't let the big teeth scare you, our T-Rex is really a big softie that
+          loves showing off. Her hobbies include making stompy noises with her feet
+          and going for runs around her pen.</p>
+        </li>
+        <li data-dinosaur='brachiosaurus'>
+          Brachiosaurus
+          <p>Our biggest dinosaur by far, she weighs as much as 12 elephants! But don't
+          worry, she's very friendly and we've taught her to be <i>extremely</i> careful about
+          where she's stepping!</p>
+        </li>
+      </ul>
+    </article>
+
+    <article id='canvasContainer' class='hidden'>
+      <!-- Main WebGL content, injected by dinosaur-app.js -->
+    </article>
+
     <script type="module">
       import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
       import { QueryArgs } from './js/query-args.js';
 
-      import { PreloadDinosaurApp, RunDinosaurApp } from './js/dinosaur-app.js';
+      import { PreloadDinosaurApp, RunDinosaurApp, RunDinosaurAppWithModel } from './js/dinosaur-app.js';
 
-      // Initialized the polyfill unless specifically srequested not to.
+      // Initialized the polyfill unless specifically requested not to.
       if (QueryArgs.getBool('polyfill', true)) {
         let polyfill = new WebXRPolyfill();
       }
@@ -105,18 +160,31 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let debug = QueryArgs.getBool('debug');
 
       let mainElement = document.querySelector('main');
+      let selectionElement = document.getElementById('dinosaurSelection');
+      let containerElement = document.getElementById('canvasContainer');
 
       let view2DButton = document.getElementById('view2DButton');
       let viewVRButton = document.getElementById('viewVRButton');
       let viewARButton = null; //document.getElementById('viewARButton');
 
       view2DButton.addEventListener('click', () => {
-        RunDinosaurApp();
+        //RunDinosaurApp(containerElement);
+        selectionElement.classList.remove('hidden');
       });
 
       viewVRButton.addEventListener('click', () => {
-        RunDinosaurApp('immersive-vr');
+        RunDinosaurApp(containerElement, 'immersive-vr');
       });
+
+      // Wire up each of the dinosaur selection options
+      let dinosaurOptions = document.querySelectorAll('#dinosaurList>li');
+      for (let dinosaur of dinosaurOptions) {
+        let dinosaurType = dinosaur.getAttribute('data-dinosaur');
+        dinosaur.addEventListener('click', () => {
+          RunDinosaurAppWithModel(containerElement, dinosaurType);
+          selectionElement.classList.remove('hidden');
+        });
+      }
 
       // Begin loading the app
       PreloadDinosaurApp(debug).then(() => {

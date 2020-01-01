@@ -50,7 +50,7 @@ const MAX_BUTTON_HEIGHT = 1.1;
 const BUTTON_HEIGHT_DEADZONE = 0.15;
 
 let preloadPromise, vrButton, appRunning = false;
-let container, stats, controls;
+let stats, controls;
 let camera, scene, renderer;
 let viewerProxy;
 let gltfLoader;
@@ -185,8 +185,6 @@ export function PreloadDinosaurApp(debug = false) {
 
   debugEnabled = debug;
 
-  container = document.createElement('div');
-
   scene = new THREE.Scene();
 
   gltfLoader = new GLTFLoader();
@@ -244,13 +242,6 @@ export function PreloadDinosaurApp(debug = false) {
     stats = new XRStats(renderer);
   }
 
-  vrButton = VRButton.createButton(renderer);
-  if (!debugEnabled) {
-    vrButton.style.top = vrButton.style.bottom;
-    vrButton.style.bottom = '';
-  }
-  container.appendChild(vrButton);
-
   renderer.xr.addEventListener('sessionstart', () => {
     initControllers();
 
@@ -307,11 +298,16 @@ export function PreloadDinosaurApp(debug = false) {
   return preloadPromise;
 }
 
-export function RunDinosaurApp(xrSessionMode = null) {
+export function RunDinosaurApp(container, xrSessionMode = null) {
   if (!appRunning) {
     // Hide the landing page.
     let landingPage = document.getElementById('landingPage');
-    landingPage.style.display = 'none';
+    landingPage.classList.add('hidden');
+
+    let selectionElement = document.getElementById('dinosaurSelection');
+    selectionElement.classList.add('hidden');
+
+    container.classList.remove('hidden');
 
     // Ensure the app content has been loaded (will early terminate if already
     // called).
@@ -323,6 +319,13 @@ export function RunDinosaurApp(xrSessionMode = null) {
     }
 
     buildButtons();
+
+    vrButton = VRButton.createButton(renderer);
+    if (!debugEnabled) {
+      vrButton.style.top = vrButton.style.bottom;
+      vrButton.style.bottom = '';
+    }
+    container.appendChild(vrButton);
 
     // Attach the main WebGL canvas and supporting UI to the page
     container.appendChild(renderer.domElement);
@@ -339,6 +342,12 @@ export function RunDinosaurApp(xrSessionMode = null) {
   if (xrSessionMode) {
     vrButton.onclick();
   }
+}
+
+export function RunDinosaurAppWithModel(container, model) {
+  loadModel(model).then(() => {
+    RunDinosaurApp(container);
+  });
 }
 
 function buildButtons() {

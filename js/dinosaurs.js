@@ -23,7 +23,6 @@
 export let Dinosaurs = {
   ankylosaurus: {
     name: 'Ankylosaurus',
-    description: `She may be covered in spikes, but our Ankylosaur is actually quite cuddly and loves to meet new friends! Think of her as a big, prehistoric puppy.`,
     path: 'media/models/ankylosaurus/',
     file: 'compressed.glb',
     height: 1.8,
@@ -50,7 +49,6 @@ export let Dinosaurs = {
   },
   stegosaurus: {
     name: 'Stegosaurus',
-    description: `Strong and proud, the Stegosaurus is one of our more popular dinosaurs. She favorite thing is getting her plates scrubbed clean so they stay such a beautiful, shiny red.`,
     path: 'media/models/stegosaurus/',
     file: 'compressed.glb',
     height: 4.3,
@@ -69,7 +67,6 @@ export let Dinosaurs = {
   },
   raptor: {
     name: 'Utahraptor',
-    description: `You've probably heard these smart dinosaurs called "Velociraptors", but those were actually quite small. Our Utahraptor is much closer in size to the dinosaurs you know and love from the big screen.`,
     path: 'media/models/velociraptor/',
     file: 'compressed.glb',
     height: 2.0,
@@ -87,7 +84,6 @@ export let Dinosaurs = {
   },
   triceratops: {
     name: 'Triceratops',
-    description: `Our youngest dinosaur, this juvenile Triceratops is a smaller than a full grown adult would be. Spunky and playful, she loves being the center of attention.`,
     path: 'media/models/triceratops/',
     file: 'compressed.glb',
     height: 2.8,
@@ -106,7 +102,6 @@ export let Dinosaurs = {
   },
   parasaurolophus: {
     name: 'Parasaurolophus',
-    description: `Our Parasaurolophus is a mischevious, silly dinosaur. The long crest on her head acts like a trumpet, which she loves using to surprise park guests.`,
     path: 'media/models/parasaurolophus/',
     file: 'compressed.glb',
     height: 4,
@@ -121,7 +116,6 @@ export let Dinosaurs = {
   },
   pachycephalosaurus: {
     name: 'Pachycephalosaurus',
-    description: `This sweet "Pachy" is one of our older dinosaurs. She's a bit shy and gets nervous around new people, but is incredibly gentle.`,
     path: 'media/models/pachycephalosaurus/',
     file: 'compressed.glb',
     height: 3,
@@ -136,7 +130,6 @@ export let Dinosaurs = {
   },
   trex: {
     name: 'Tyrannosaurus Rex',
-    description: `Don't let the big teeth scare you, our T-Rex is really a big softie that loves showing off. Her hobbies include making stompy noises with her feet and going for runs around her pen.`,
     path: 'media/models/tyrannosaurus/',
     file: 'compressed.glb',
     height: 5,
@@ -154,7 +147,6 @@ export let Dinosaurs = {
   },
   brachiosaurus: {
     name: 'Brachiosaurus',
-    description: `Our biggest dinosaur by far, she weighs as much as 12 elephants! But don't worry, she's very friendly, and we've taught her to be extremely careful about where she's stepping!`,
     path: 'media/models/brachiosaurus/',
     file: 'compressed.glb',
     height: 12,

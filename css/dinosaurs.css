@@ -17,11 +17,6 @@ body {
   color: #DEDEDE;
 }
 
-/* A quick hack to hide the landing page publically while I'm still working on it */
-.hide-landing-page header, .hide-landing-page main, .hide-landing-page footer {
-  display: none;
-}
-
 a {
   color: #9999DE;
   text-decoration: none;
@@ -46,6 +41,90 @@ canvas {
   bottom: 0;
   margin: 0;
   touch-action: none;
+}
+
+article {
+  margin: 0;
+}
+
+article.hidden {
+  display: none;
+}
+
+#landingPage {
+  margin: 0;
+  height: 100%;
+}
+
+#dinosaurSelection {
+  position: absolute;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  transform: translateX(0);
+  background-color: black;
+  transition: all 0.5s;
+  font-size: 0.9em;
+}
+
+#dinosaurSelection.hidden {
+  display: block;
+  transform: translateX(-100%);
+}
+
+#dinosaurSelection .menu {
+  margin: auto;
+  max-width: 968px;
+}
+
+#dinosaurSelection li {
+  min-height: 128px;
+}
+
+#dinosaurSelection li:before {
+  display: block;
+  float: left;
+  width: 128px;
+  height: 128px;
+  content: '';
+  background-image: url('../media/textures/button-atlas.png');
+  background-repeat: no-repeat;
+  background-size: 400%;
+}
+
+li[data-dinosaur="ankylosaurus"]:before {
+  background-position: 0 0;
+}
+
+li[data-dinosaur="brachiosaurus"]:before {
+  background-position: -128px 0;
+}
+
+li[data-dinosaur="raptor"]:before {
+  background-position: -384px -128px;
+}
+
+li[data-dinosaur="triceratops"]:before {
+  background-position: -128px -128px;
+}
+
+li[data-dinosaur="parasaurolophus"]:before {
+  background-position: -384px 0;
+}
+
+li[data-dinosaur="pachycephalosaurus"]:before {
+  background-position: -256px 0;
+}
+
+li[data-dinosaur="stegosaurus"]:before {
+  background-position: 0 -128px;
+}
+
+li[data-dinosaur="trex"]:before {
+  background-position: -256px -128px;
 }
 
 .dg.main {
@@ -151,44 +230,46 @@ main.loading>.lds-ellipsis {
 }
 
 .main-menu {
-  list-style: none;
   margin: auto;
   max-width: 786px;
-  padding: 0;
   transition: all 1s;
 }
 
-.main-menu>li {
-  display: block;
+ul.menu {
+  list-style: none;
+  padding: 0;
+}
+
+ul.menu>li {
   font-size: 1.8em;
   padding: 0.5em;
   min-height: 3em;
   transition: color 0.5s;
 }
 
-.main-menu>li>p {
+ul.menu>li>p {
   font-size: 0.6em;
 }
 
-.main-menu>li:hover {
+ul.menu>li:hover {
   cursor: pointer;
   color: rgb(80,168,252);
 }
 
-.main-menu>li:not(:last-child) {
+ul.menu>li:not(:last-child) {
   border-bottom: 1px solid grey;
 }
 
-.main-menu>li:before {
+ul.menu>li:before {
   margin-right: 0.5em;
   width: 3em;
 } 
 
-.main-menu>li.disabled {
+ul.menu>li.disabled {
   color: rgb(90,90,90);
 }
 
-.main-menu>li.disabled:hover {
+ul.menu>li.disabled:hover {
   color: rgb(80,80,120);
 }
 
