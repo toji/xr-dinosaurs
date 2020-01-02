@@ -49,6 +49,10 @@ function ensureArgsCached() {
 }
 
 export class QueryArgs {
+  static clearCache() {
+    urlArgs = null;
+  }
+
   static getString(name, defaultValue) {
     ensureArgsCached();
     let lcaseName = name.toLowerCase();

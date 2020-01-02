@@ -91,7 +91,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     </article>
 
     <article id='dinosaurSelection' class='hidden'>
-      
+      <div class='button-bar'>
+        <button id='closeSelection' alt='Close Dinosaur Selection'>Close</button>
+      </div>
       <ul id='dinosaurList' class='menu'>
         <li data-dinosaur='ankylosaurus'>
           Anklyosaurus
@@ -142,6 +144,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     </article>
 
     <article id='canvasContainer' class='hidden'>
+      <button id='showSelection'>Back</button>
       <!-- Main WebGL content, injected by dinosaur-app.js -->
     </article>
 
@@ -151,29 +154,66 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       import { PreloadDinosaurApp, RunDinosaurApp, RunDinosaurAppWithModel } from './js/dinosaur-app.js';
 
+      let selecting = QueryArgs.getBool('selecting', false);
+      let viewing = QueryArgs.getString('viewing', '');
+
       // Initialized the polyfill unless specifically requested not to.
-      if (QueryArgs.getBool('polyfill', true)) {
+      let usePolyfill = QueryArgs.getBool('polyfill', true);
+      if (usePolyfill) {
         let polyfill = new WebXRPolyfill();
       }
 
       // Should debug mode be enabled be used?
       let debug = QueryArgs.getBool('debug');
 
+      function buildQueryArgs() {
+        let args = [];
+        if (selecting) { args.push('selecting=1'); }
+        else if (viewing != '') { args.push(`viewing=${viewing}`); }
+        if (debug) { args.push('debug=1'); }
+        if (!usePolyfill) { args.push('polyfill=0'); }
+        return '?' + args.join('&');
+      }
+
       let mainElement = document.querySelector('main');
       let selectionElement = document.getElementById('dinosaurSelection');
       let containerElement = document.getElementById('canvasContainer');
+
+      let closeSelectionButton = document.getElementById('closeSelection');
+      let showSelectionButton = document.getElementById('showSelection');
 
       let view2DButton = document.getElementById('view2DButton');
       let viewVRButton = document.getElementById('viewVRButton');
       let viewARButton = null; //document.getElementById('viewARButton');
 
+      window.addEventListener("popstate", function(e) {
+        QueryArgs.clearCache();
+        selecting = QueryArgs.getBool('selecting', false);
+        viewing = QueryArgs.getString('viewing', '');
+        updateAppState(false);
+      });
+
+      closeSelectionButton.addEventListener('click', () => {
+        selecting = false;
+        updateAppState();
+      });
+
+      showSelectionButton.addEventListener('click', () => {
+        selecting = true;
+        updateAppState();
+      });
+
       view2DButton.addEventListener('click', () => {
-        //RunDinosaurApp(containerElement);
-        selectionElement.classList.remove('hidden');
+        selecting = true;
+        updateAppState();
       });
 
       viewVRButton.addEventListener('click', () => {
+        selecting = false;
+        viewing = 'ankylosaurus';
+        selectionElement.classList.add('hidden');
         RunDinosaurApp(containerElement, 'immersive-vr');
+        history.pushState(null, null, buildQueryArgs());
       });
 
       // Wire up each of the dinosaur selection options
@@ -181,17 +221,39 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       for (let dinosaur of dinosaurOptions) {
         let dinosaurType = dinosaur.getAttribute('data-dinosaur');
         dinosaur.addEventListener('click', () => {
-          RunDinosaurAppWithModel(containerElement, dinosaurType);
-          selectionElement.classList.remove('hidden');
+          selecting = false;
+          viewing = dinosaurType;
+          updateAppState();
         });
       }
 
-      // Begin loading the app
-      PreloadDinosaurApp(debug).then(() => {
-        // When the app's primary resources are ready to display, show the
-        // main menu buttons.
-        mainElement.classList.remove('loading');
-      });
+      function updateAppState(pushState = true) {
+        if (selecting) {
+          selectionElement.classList.remove('hidden');
+        } else {
+          selectionElement.classList.add('hidden');
+        }
+
+        if (selecting || viewing == '') {
+          if (!selecting) {
+            let landingPage = document.getElementById('landingPage');
+            landingPage.classList.remove('hidden');
+          }
+          // Begin loading the app
+          PreloadDinosaurApp(debug).then(() => {
+            // When the app's primary resources are ready to display, show the
+            // main menu buttons.
+            mainElement.classList.remove('loading');
+          });
+        } else {
+          RunDinosaurAppWithModel(containerElement, viewing);
+        }
+
+        if (pushState) {
+          history.pushState(null, null, buildQueryArgs());
+        }
+      }
+      updateAppState();
 
       // Check to see if WebXR is available
       if ( 'xr' in navigator ) {

@@ -304,9 +304,6 @@ export function RunDinosaurApp(container, xrSessionMode = null) {
     let landingPage = document.getElementById('landingPage');
     landingPage.classList.add('hidden');
 
-    let selectionElement = document.getElementById('dinosaurSelection');
-    selectionElement.classList.add('hidden');
-
     container.classList.remove('hidden');
 
     // Ensure the app content has been loaded (will early terminate if already
@@ -337,6 +334,9 @@ export function RunDinosaurApp(container, xrSessionMode = null) {
     appRunning = true;
   }
 
+  let selectionElement = document.getElementById('dinosaurSelection');
+  selectionElement.classList.add('hidden');
+
   // If the app was requested to start up immediately into a given XR session
   // mode, do so now.
   if (xrSessionMode) {
@@ -345,6 +345,10 @@ export function RunDinosaurApp(container, xrSessionMode = null) {
 }
 
 export function RunDinosaurAppWithModel(container, model) {
+  // Ensure the app content has been loaded (will early terminate if already
+  // called).
+  PreloadDinosaurApp();
+
   loadModel(model).then(() => {
     RunDinosaurApp(container);
   });
@@ -358,9 +362,6 @@ function buildButtons() {
   buttonGroup.position.y = targetButtonGroupHeight = 0.6;
   buttonGroup.position.z = -0.9;
   buttonGroup.rotation.x = Math.PI * 0.3;
-
-  let domButtonGroup = document.createElement('div');
-  domButtonGroup.classList.add('xr-button-group');
 
   let x = LEFT_BUTTON_X;
   let y = 0;
@@ -387,14 +388,6 @@ function buildButtons() {
       x += BUTTON_SPACING;
     }
     buttonGroup.add(button);
-
-    if (!debugEnabled) {
-      domButtonGroup.appendChild(button.domElement);
-    }
-  }
-
-  if (!debugEnabled) {
-    document.body.appendChild(domButtonGroup);
   }
 
   let hornButton = buttonManager.createButton({

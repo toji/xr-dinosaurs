@@ -30,19 +30,6 @@ h1 {
   text-align: center;
 }
 
-canvas {
-  position: absolute;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  margin: 0;
-  touch-action: none;
-}
-
 article {
   margin: 0;
 }
@@ -54,6 +41,30 @@ article.hidden {
 #landingPage {
   margin: 0;
   height: 100%;
+}
+
+/*
+ * Dinosaur selection menu
+ */
+
+#dinosaurSelection .button-bar {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: rgba(0.0, 0.0, 0.0, 0.7);
+}
+
+#closeSelection {
+  margin: 1em;
+  float: right;
+  text-indent: -9999px;
+  width: 32px;
+  height: 32px;
+  background-image: url('../media/textures/close-icon.svg');
+  background-color: transparent;
+  border: 0;
 }
 
 #dinosaurSelection {
@@ -78,6 +89,7 @@ article.hidden {
 #dinosaurSelection .menu {
   margin: auto;
   max-width: 968px;
+  margin-top: 48px;
 }
 
 #dinosaurSelection li {
@@ -127,37 +139,15 @@ li[data-dinosaur="trex"]:before {
   background-position: -256px -128px;
 }
 
+/*
+ *
+ */
+
 .dg.main {
   position: absolute;
   z-index: 100;
   top: 1em;
   right: 1em;
-}
-
-.xr-button-group {
-  position: absolute;
-  z-index: 100;
-  bottom: 0;
-  left: 0;
-  overflow-x: scroll;
-  overflow-y: hidden; 
-  width: 100%;
-  white-space: nowrap;
-}
-
-.xr-button {
-  display: inline-block;
-  width: 128px;
-  height: 128px;
-  padding: 0;
-  margin: 0.5em;
-  background-color: 0xAA2222;
-  border-radius: 128px;
-  border-width: 0;
-  overflow: hidden;
-  box-shadow: 0 0.4em 0.4em black;
-  background-repeat: no-repeat;
-  background-size: 400%;
 }
 
 header {
@@ -299,6 +289,24 @@ footer {
   padding: 1em;
   margin: 0;
   height: 10em;
+}
+
+canvas {
+  position: absolute;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  touch-action: none;
+}
+
+#showSelection {
+  position: absolute;
+  z-index: 1;
 }
 
 .webxr-experience {

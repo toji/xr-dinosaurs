@@ -174,25 +174,4 @@ class XRButton extends THREE.Object3D {
   click() {
     if (this._onClick) { this._onClick(); }
   }
-
-  get domElement() {
-    if (!this._domElement) {
-      this._domElement = document.createElement('button');
-      this._domElement.classList.add('xr-button');
-      if (this._title) {
-        this._domElement.title = this._title;
-      }
-      this.domElement.style = `
-      background-image: url('${this._imageUrl}');
-      background-repeat: no-repeat;
-      background-position: -${this._imageOffset[0] * 512}px -${this._imageOffset[1] * 512}px;
-      `;
-      this._domElement.addEventListener('click', () => { this.click(); });
-    }
-    return this._domElement;
-  }
-  
-  update(delta) {
-    
-  }
 }
