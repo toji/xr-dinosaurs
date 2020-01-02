@@ -143,6 +143,31 @@ li[data-dinosaur="trex"]:before {
  *
  */
 
+#canvasContainer .button-bar {
+  display: block;
+  position: fixed;
+  z-index: 10;
+  height: 64px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-image: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%);
+}
+
+#showSelection {
+  margin: 1em;
+  text-indent: -9999px;
+  width: 32px;
+  height: 32px;
+  background-image: url('../media/textures/back-icon.svg');
+  background-color: transparent;
+  border: 0;
+}
+
+/*
+ *
+ */
+
 .dg.main {
   position: absolute;
   z-index: 100;

@@ -242,6 +242,12 @@ export function PreloadDinosaurApp(debug = false) {
     stats = new XRStats(renderer);
   }
 
+  let buttonBar = document.querySelector('#canvasContainer .button-bar');
+  vrButton = VRButton.createButton(renderer);
+  vrButton.style.top = '0.6em';
+  vrButton.style.bottom = '';
+  buttonBar.appendChild(vrButton);
+
   renderer.xr.addEventListener('sessionstart', () => {
     initControllers();
 
@@ -316,13 +322,6 @@ export function RunDinosaurApp(container, xrSessionMode = null) {
     }
 
     buildButtons();
-
-    vrButton = VRButton.createButton(renderer);
-    if (!debugEnabled) {
-      vrButton.style.top = vrButton.style.bottom;
-      vrButton.style.bottom = '';
-    }
-    container.appendChild(vrButton);
 
     // Attach the main WebGL canvas and supporting UI to the page
     container.appendChild(renderer.domElement);

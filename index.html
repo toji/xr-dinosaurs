@@ -144,7 +144,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     </article>
 
     <article id='canvasContainer' class='hidden'>
-      <button id='showSelection'>Back</button>
+      <div class='button-bar'>
+        <button id='showSelection' alt='Select a different Dinosaur'>Back</button>
+      </div>
       <!-- Main WebGL content, injected by dinosaur-app.js -->
     </article>
 
@@ -175,6 +177,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         return '?' + args.join('&');
       }
 
+      let landingPage = document.getElementById('landingPage');
       let mainElement = document.querySelector('main');
       let selectionElement = document.getElementById('dinosaurSelection');
       let containerElement = document.getElementById('canvasContainer');
@@ -185,6 +188,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let view2DButton = document.getElementById('view2DButton');
       let viewVRButton = document.getElementById('viewVRButton');
       let viewARButton = null; //document.getElementById('viewARButton');
+
+      let vrSupported = false;
 
       window.addEventListener("popstate", function(e) {
         QueryArgs.clearCache();
@@ -209,11 +214,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       });
 
       viewVRButton.addEventListener('click', () => {
+        if (!vrSupported) return;
         selecting = false;
         viewing = 'ankylosaurus';
+        landingPage.classList.add('hidden');
         selectionElement.classList.add('hidden');
-        RunDinosaurApp(containerElement, 'immersive-vr');
+        containerElement.classList.remove('hidden');
         history.pushState(null, null, buildQueryArgs());
+        RunDinosaurApp(containerElement, 'immersive-vr');
       });
 
       // Wire up each of the dinosaur selection options
@@ -236,16 +244,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         if (selecting || viewing == '') {
           if (!selecting) {
-            let landingPage = document.getElementById('landingPage');
             landingPage.classList.remove('hidden');
+            containerElement.classList.add('hidden');
           }
-          // Begin loading the app
-          PreloadDinosaurApp(debug).then(() => {
-            // When the app's primary resources are ready to display, show the
-            // main menu buttons.
-            mainElement.classList.remove('loading');
-          });
         } else {
+          landingPage.classList.add('hidden');
+          containerElement.classList.remove('hidden');
           RunDinosaurAppWithModel(containerElement, viewing);
         }
 
@@ -253,12 +257,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           history.pushState(null, null, buildQueryArgs());
         }
       }
-      updateAppState();
+
+      // Begin loading the app
+      PreloadDinosaurApp(debug).then(() => {
+        // When the app's primary resources are ready to display, show the
+        // main menu buttons.
+        mainElement.classList.remove('loading');
+        updateAppState();
+      });
 
       // Check to see if WebXR is available
       if ( 'xr' in navigator ) {
         if (viewVRButton) {
           navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+            vrSupported = supported;
             if (supported) {
               viewVRButton.classList.remove('disabled');
             } else {

@@ -216,7 +216,7 @@ export class XRStats extends THREE.Object3D {
       this._orthoCamera.right = this._renderer.domElement.offsetWidth;
       this._orthoCamera.top = this._renderer.domElement.offsetHeight;
       this.scale.set(this._orthoSize, this._orthoSize, 1);
-      this.position.set((this._orthoSize * 0.5) + 5, this._orthoCamera.top - (this._orthoSize * 0.5) - 5, 0);
+      this.position.set((this._orthoSize * 0.5) + 5, (this._orthoSize * 0.5) + 5, 0);
       this._orthoCamera.updateProjectionMatrix();
       this._renderer.render(this._orthoScene, this._orthoCamera);
       this._renderer.autoClear = true;
