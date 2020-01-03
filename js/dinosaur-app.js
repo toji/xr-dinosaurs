@@ -100,18 +100,11 @@ function screenshot() {
 function initDebugUI() {
   let gui = new dat.GUI();
 
-  let dinoList = {};
-  for (let dino in Dinosaurs) {
-    dinoList[Dinosaurs[dino].name] = dino;
-  }
-
-  gui.add(debugSettings, 'dinosaur', dinoList).onFinishChange(() => {
-    loadModel(debugSettings.dinosaur);
-  });
-  gui.add(debugSettings, 'scare');
-  gui.add(debugSettings, 'screenshot');
-  gui.add(debugSettings, 'raisePlatform');
-  gui.add(debugSettings, 'lowerPlatform');
+  let actionFolder = gui.addFolder('Actions');
+  actionFolder.add(debugSettings, 'scare');
+  actionFolder.add(debugSettings, 'screenshot');
+  actionFolder.add(debugSettings, 'raisePlatform');
+  actionFolder.add(debugSettings, 'lowerPlatform');
 
   let guiRenderingFolder = gui.addFolder('Rendering Options');
   guiRenderingFolder.add(debugSettings, 'drawSkybox').onFinishChange(() => {

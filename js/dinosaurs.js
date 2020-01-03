@@ -22,7 +22,6 @@
 
 export let Dinosaurs = {
   ankylosaurus: {
-    name: 'Ankylosaurus',
     path: 'media/models/ankylosaurus/',
     file: 'compressed.glb',
     height: 1.8,
@@ -48,7 +47,6 @@ export let Dinosaurs = {
     shadowSize: 2.5,
   },
   stegosaurus: {
-    name: 'Stegosaurus',
     path: 'media/models/stegosaurus/',
     file: 'compressed.glb',
     height: 4.3,
@@ -83,7 +81,6 @@ export let Dinosaurs = {
     shadowSize: 1.5,
   },
   triceratops: {
-    name: 'Triceratops',
     path: 'media/models/triceratops/',
     file: 'compressed.glb',
     height: 2.8,
@@ -101,7 +98,6 @@ export let Dinosaurs = {
     shadowSize: 2.0,
   },
   parasaurolophus: {
-    name: 'Parasaurolophus',
     path: 'media/models/parasaurolophus/',
     file: 'compressed.glb',
     height: 4,
@@ -115,7 +111,6 @@ export let Dinosaurs = {
     shadowSize: 2.0,
   },
   pachycephalosaurus: {
-    name: 'Pachycephalosaurus',
     path: 'media/models/pachycephalosaurus/',
     file: 'compressed.glb',
     height: 3,
@@ -129,7 +124,6 @@ export let Dinosaurs = {
     shadowSize: 2.0,
   },
   trex: {
-    name: 'Tyrannosaurus Rex',
     path: 'media/models/tyrannosaurus/',
     file: 'compressed.glb',
     height: 5,
@@ -146,7 +140,6 @@ export let Dinosaurs = {
     shadowSize: 4.0,
   },
   brachiosaurus: {
-    name: 'Brachiosaurus',
     path: 'media/models/brachiosaurus/',
     file: 'compressed.glb',
     height: 12,
@@ -163,7 +156,6 @@ export let Dinosaurs = {
     shadowSize: 4.5,
   },
   pterodactyl: {
-    name: 'Pterodactyl',
     path: 'media/models/pterodactyl/',
     file: 'compressed.glb',
     height: 1.8,

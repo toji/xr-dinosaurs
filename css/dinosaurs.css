@@ -143,6 +143,14 @@ li[data-dinosaur="trex"]:before {
  *
  */
 
+#canvasContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
+
 #canvasContainer .button-bar {
   display: block;
   position: fixed;
@@ -201,13 +209,6 @@ header section {
   max-width: 786px;
   padding: 1em;
   border-radius: 5px;
-  animation: fadein 3s;
-}
-
-@keyframes fadein {
-  0% { opacity: 0; }
-  30% { opacity: 0; }
-  100% { opacity: 1; }
 }
 
 header h2 {

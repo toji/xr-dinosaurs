@@ -22,6 +22,7 @@ import * as THREE from './third-party/three.js/build/three.module.js';
 
 const DEFAULT_POSITION = [0, 0, -3];
 const DEFAULT_ORIENTATION = Math.PI * 0.2;
+const DEFAULT_HEIGHT = 3;
 const DEFAULT_ANIMATION_SEQUENCE = ['Idle'];
 
 // The models we're using here have an incredibly annoying issue where
@@ -88,19 +89,38 @@ export class XRDinosaurManager {
       this._currentDinosaur = this._loadedDinosaurs[key];
       return Promise.resolve(this._currentDinosaur);
     }
+
+    let dinosaur = new XRDinosaur(definition);
+    this._loadedDinosaurs[key] = dinosaur;
+
     return new Promise((resolve, reject) => {
       this._currentDefinition = definition;
 
       this._gltfLoader.setPath(definition.path);
       let fileName = definition.file || 'scene.gltf';
       this._gltfLoader.load(fileName, (gltf) => {
+        // Scale to a more realistic size based on the real dinosaur's height
+        let bbox = new THREE.Box3().setFromObject(gltf.scene);
+        let modelScale = dinosaur.height / (bbox.max.y - bbox.min.y);
+        gltf.scene.scale.multiplyScalar(modelScale);
+
+        // Position feet on the ground
+        gltf.scene.position.y -= bbox.min.y * modelScale;
+
+        dinosaur.add(gltf.scene);
+
+        // Clean up the animation data
+        for (let i = 0; i < gltf.animations.length; ++i) {
+          trimEmptyLeadingKeyframes(gltf.animations[i]);
+        }
+        dinosaur.animations = gltf.animations;
+
         if (definition != this._currentDefinition) {
           reject(new Error('Load was preempted.'));
           return;
         } else {
-          this._currentDinosaur = new XRDinosaur(definition, gltf);
-          this._loadedDinosaurs[key] = this._currentDinosaur;
-          resolve(this._currentDinosaur);
+          this._currentDinosaur = dinosaur;
+          resolve(dinosaur);
         }
       });
     });
@@ -112,48 +132,29 @@ export class XRDinosaurManager {
 }
 
 class XRDinosaur extends THREE.Object3D {
-  constructor(definition, gltf) {
+  constructor(definition) {
     super();
 
     this._definition = definition;
     this._scared = false;
 
-    // Scale to a more realistic size in meters
-    let bbox = new THREE.Box3().setFromObject(gltf.scene);
-    let modelScale = definition.height / (bbox.max.y - bbox.min.y);
-    gltf.scene.children[0].scale.multiplyScalar(modelScale);
-
-    // Recalculate the new, scaled bounds
-    bbox = new THREE.Box3().setFromObject(gltf.scene);
     this._center = new THREE.Vector3();
-    bbox.getCenter(this._center);
-
-    // Position feet on the ground
-    gltf.scene.position.fromArray(definition.position || DEFAULT_POSITION);
-    gltf.scene.position.y -= bbox.min.y;
-    gltf.scene.rotation.y = definition.orientation || DEFAULT_ORIENTATION;
-
-    this._center.add(gltf.scene.position);
-
-    this.add(gltf.scene);
-
-    // Find nodes that will cast blob shadows
-    this._shadowNodes = [];
-    gltf.scene.traverse((child) => {
-      if (definition.shadowNodes &&
-          definition.shadowNodes.includes(child.name)) {
-        this._shadowNodes.push(child);
-      }
-    });
-
-    // Process animations
-    this._mixer = new THREE.AnimationMixer(gltf.scene);
-
-    let animations = gltf.animations;
+    this._shadowNodes = null;
+    this._mixer = new THREE.AnimationMixer(this);
     this._actions = {};
+    this._currentAction = null;
+    this._envMap = null;
+
+    this.height = this._definition.height || DEFAULT_HEIGHT;
+
+    this.position.fromArray(this._definition.position || DEFAULT_POSITION);
+    this.rotation.y = this._definition.orientation || DEFAULT_ORIENTATION;
+  }
+
+  set animations(animations) {
+    // Process animations into clips
     for (let i = 0; i < animations.length; ++i) {
       let animation = animations[i];
-      trimEmptyLeadingKeyframes(animation);
       let action = this._mixer.clipAction(animation);
       this._actions[animation.name] = action;
       if (animation.name == 'Die' || animation.name == 'Get_Up') {
@@ -163,7 +164,7 @@ class XRDinosaur extends THREE.Object3D {
 
     // Set up the animation sequence
     let animationIndex = 0;
-    let animationSequence = definition.animationSequence || DEFAULT_ANIMATION_SEQUENCE;
+    let animationSequence = this.animationSequence;
     this._currentAction = this._actions[animationSequence[0]];
     this._currentAction.play();
 
@@ -188,10 +189,20 @@ class XRDinosaur extends THREE.Object3D {
     return this._definition;
   }
 
+  get shadowNodeNames() {
+    return this._definition.shadowNodes;
+  }
+
+  get animationSequence() {
+    return this._definition.animationSequence || DEFAULT_ANIMATION_SEQUENCE;
+  }
+
   set envMap(value) {
+    this._envMap = value;
     this.traverse((child) => {
       if (child.isMesh) {
         child.material.envMap = value;
+        child.material.uniformsNeedUpdate = true;
       }
     });
   }
@@ -206,6 +217,15 @@ class XRDinosaur extends THREE.Object3D {
   }
 
   get shadowNodes() {
+    if (!this._shadowNodes) {
+      this._shadowNodes = [];
+      this.traverse((child) => {
+        if (this.shadowNodeNames &&
+            this.shadowNodeNames.includes(child.name)) {
+          this._shadowNodes.push(child);
+        }
+      });
+    }
     return this._shadowNodes;
   }
 
@@ -216,6 +236,8 @@ class XRDinosaur extends THREE.Object3D {
   }
 
   get center() {
+    let bbox = new THREE.Box3().setFromObject(this);
+    bbox.getCenter(this._center);
     return this._center;
   }
 }
