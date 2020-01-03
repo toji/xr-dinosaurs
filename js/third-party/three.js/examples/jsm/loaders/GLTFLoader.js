@@ -62,6 +62,7 @@ import {
 	SkinnedMesh,
 	Sphere,
 	SpotLight,
+	TangentSpaceNormalMap,
 	TextureLoader,
 	TriangleFanDrawMode,
 	TriangleStripDrawMode,
@@ -689,6 +690,7 @@ var GLTFLoader = ( function () {
 				'bumpMap',
 				'bumpScale',
 				'normalMap',
+				'normalMapType',
 				'displacementMap',
 				'displacementScale',
 				'displacementBias',
@@ -752,10 +754,10 @@ var GLTFLoader = ( function () {
 					'material.diffuseColor = diffuseColor.rgb;',
 					'vec3 dxy = max( abs( dFdx( geometryNormal ) ), abs( dFdy( geometryNormal ) ) );',
 					'float geometryRoughness = max( max( dxy.x, dxy.y ), dxy.z );',
-				
 					'material.specularRoughness = max( 1.0 - glossinessFactor, 0.0525 );// 0.0525 corresponds to the base mip of a 256 cubemap.',
 					'material.specularRoughness += geometryRoughness;',
 					'material.specularRoughness = min( material.specularRoughness, 1.0 );',
+					'material.specularColor = specularFactor.rgb;',
 				].join( '\n' );
 
 				var fragmentShader = shader.fragmentShader
@@ -859,6 +861,7 @@ var GLTFLoader = ( function () {
 				material.bumpScale = 1;
 
 				material.normalMap = params.normalMap === undefined ? null : params.normalMap;
+				material.normalMapType = TangentSpaceNormalMap;
 
 				if ( params.normalScale ) material.normalScale = params.normalScale;
 
