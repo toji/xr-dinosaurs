@@ -20,9 +20,8 @@
 
 import { HDRSkybox } from './hdr-skybox.js';
 import { BlobShadowManager } from './blob-shadow-manager.js';
-import { Dinosaurs } from './dinosaurs.js';
 import { XRButtonManager } from './xr-button.js';
-import { XRDinosaurManager } from './xr-dinosaur.js';
+import { XRDinosaurLoader } from './dinosaurs/xr-dinosaur-loader.js';
 import { XRInputCursorManager } from './xr-input-cursor.js';
 import { XRInputRay } from './xr-input-ray.js';
 import { XRStats } from './xr-stats.js';
@@ -54,7 +53,7 @@ let stats, controls;
 let camera, scene, renderer;
 let viewerProxy;
 let gltfLoader;
-let xrDinosaurManager, xrDinosaur;
+let xrDinosaurLoader, xrDinosaur;
 let blobShadowManager;
 let cursorManager;
 let environment;
@@ -186,8 +185,7 @@ export function PreloadDinosaurApp(debug = false) {
   dracoLoader.setDecoderPath('js/third-party/three.js/examples/js/libs/draco/gltf/');
   gltfLoader.setDRACOLoader(dracoLoader);
 
-  xrDinosaurManager = new XRDinosaurManager(gltfLoader);
-  xrDinosaurManager.definitions = Dinosaurs;
+  xrDinosaurLoader = new XRDinosaurLoader(gltfLoader);
   blobShadowManager = new BlobShadowManager(textureLoader.load('media/textures/shadow.png'));
   scene.add(blobShadowManager);
 
@@ -359,8 +357,8 @@ function buildButtons() {
   let y = 0;
   let z = -BUTTON_SPACING * 0.5;
   let idx = 0;
-  for (let i in Dinosaurs) {
-    let dino = Dinosaurs[i];
+  for (let i in xrDinosaurLoader.allDinosaurs) {
+    let dino = xrDinosaurLoader.allDinosaurs[i];
     if (dino.debugOnly) { continue; }
 
     let button = buttonManager.createButton({
@@ -450,7 +448,9 @@ function loadModel(key) {
     blobShadowManager.shadowNodes = [];
   }
 
-  return xrDinosaurManager.load(key).then((dinosaur) => {
+  return xrDinosaurLoader.load(key).then((dinosaur) => {
+    if (dinosaur != xrDinosaurLoader.currentDinosaur) { return; }
+
     if (xrDinosaur) {
       scene.remove(xrDinosaur);
       xrDinosaur = null;
@@ -465,7 +465,7 @@ function loadModel(key) {
     controls.update();
 
     blobShadowManager.shadowNodes = xrDinosaur.shadowNodes;
-    blobShadowManager.shadowSize = xrDinosaur.definition.shadowSize;
+    blobShadowManager.shadowSize = xrDinosaur.shadowSize;
   }).catch((err) => {
     // This will usually happen if a new dino is selected before the
     // previous one finishes loading. Not a cause for concern.
