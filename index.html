@@ -143,9 +143,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       </ul>
     </article>
 
-    <article id='canvasContainer' class='hidden'>
+    <article id='canvasContainer' class='hidden loading'>
       <div class='button-bar'>
         <button id='showSelection' alt='Select a different Dinosaur'>Back</button>
+      </div>
+
+      <div class='lds-ellipsis'>
+        <div></div><div></div><div></div><div></div>
       </div>
       <!-- Main WebGL content, injected by dinosaur-app.js -->
     </article>
@@ -191,6 +195,32 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       let vrSupported = false;
 
+      function updateAppState(pushState = true) {
+        if (selecting) {
+          selectionElement.classList.remove('hidden');
+        } else {
+          selectionElement.classList.add('hidden');
+        }
+
+        if (selecting || viewing == '') {
+          if (!selecting) {
+            landingPage.classList.remove('hidden');
+            containerElement.classList.add('hidden');
+          }
+        } else {
+          landingPage.classList.add('hidden');
+          containerElement.classList.remove('hidden');
+          setTimeout(() => {
+            RunDinosaurAppWithModel(containerElement, viewing);
+          }, 100);
+        }
+
+        if (pushState) {
+          history.pushState(null, null, buildQueryArgs());
+        }
+      }
+      updateAppState();
+
       window.addEventListener("popstate", function(e) {
         QueryArgs.clearCache();
         selecting = QueryArgs.getBool('selecting', false);
@@ -216,7 +246,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       viewVRButton.addEventListener('click', () => {
         if (!vrSupported) return;
         selecting = false;
-        viewing = 'ankylosaurus';
         landingPage.classList.add('hidden');
         selectionElement.classList.add('hidden');
         containerElement.classList.remove('hidden');
@@ -234,37 +263,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           updateAppState();
         });
       }
-
-      function updateAppState(pushState = true) {
-        if (selecting) {
-          selectionElement.classList.remove('hidden');
-        } else {
-          selectionElement.classList.add('hidden');
-        }
-
-        if (selecting || viewing == '') {
-          if (!selecting) {
-            landingPage.classList.remove('hidden');
-            containerElement.classList.add('hidden');
-          }
-        } else {
-          landingPage.classList.add('hidden');
-          containerElement.classList.remove('hidden');
-          RunDinosaurAppWithModel(containerElement, viewing);
-        }
-
-        if (pushState) {
-          history.pushState(null, null, buildQueryArgs());
-        }
-      }
-
-      // Begin loading the app
-      PreloadDinosaurApp(debug).then(() => {
-        // When the app's primary resources are ready to display, show the
-        // main menu buttons.
-        mainElement.classList.remove('loading');
-        updateAppState();
-      });
 
       // Check to see if WebXR is available
       if ( 'xr' in navigator ) {
@@ -305,6 +303,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           viewARButton.appendChild(errorMessage);
         }
       }
+
+      // Begin loading the app
+      // The timeout is to give the main page a chance to update before we kick
+      // of a fairly heavy preload process.
+      setTimeout(() => {
+        PreloadDinosaurApp(debug).then(() => {
+          // When the app's primary resources are ready to display, show the
+          // main menu buttons.
+          mainElement.classList.remove('loading');
+          containerElement.classList.remove('loading');
+        });
+      }, 100); 
     </script>
   </body>
 </html>

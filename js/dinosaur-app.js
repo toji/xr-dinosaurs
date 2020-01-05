@@ -80,7 +80,6 @@ let debugSettings = {
   drawButtons: true,
   animate: true,
 
-  dinosaur: 'ankylosaurus',
   screenshot: () => { screenshot(); },
   scare: () => { scare(); },
   raisePlatform: () => { environment.raisePlatform(); },
@@ -114,7 +113,7 @@ function initDebugUI() {
     }
   });
   guiRenderingFolder.add(debugSettings, 'drawEnvironment').onFinishChange(() => {
-    environment.scene.visible = debugSettings.drawEnvironment;
+    environment.visible = debugSettings.drawEnvironment;
   });
   guiRenderingFolder.add(debugSettings, 'drawDinosaur').onFinishChange(() => {
     xrDinosaur.visible = debugSettings.drawDinosaur;
@@ -229,8 +228,9 @@ export function PreloadDinosaurApp(debug = false) {
   light.position.set(1, 1, 1);
   scene.add(light);
 
-  if (debugEnabled) {
-    stats = new XRStats(renderer);
+  stats = new XRStats(renderer);
+  if (!debugEnabled) {
+    stats.drawOrthographic = false;
   }
 
   let buttonBar = document.querySelector('#canvasContainer .button-bar');
@@ -280,7 +280,7 @@ export function PreloadDinosaurApp(debug = false) {
     }
     environment.resetPlatform();
 
-    if (stats) {
+    if (stats && debugEnabled) {
       stats.drawOrthographic = true;
     }
   });
@@ -289,7 +289,6 @@ export function PreloadDinosaurApp(debug = false) {
   preloadPromise = skybox.getEnvMap().then((texture) => {
     envMap = texture;
     scene.background = envMap;
-    return loadModel(debugSettings.dinosaur);
   });
 
   return preloadPromise;
@@ -420,28 +419,13 @@ function buildButtons() {
     color: 0xAACCFF,
     transparent: true,
     opacity: 0.3,
-    /*envMap: envMap,
-    roughness: 0.1,
-    metalness: 0.0*/
   });
   let glassMesh = new THREE.Mesh(glassGeometry, glassMaterial);
   glassMesh.position.y = -0.05;
   buttonGroup.add(glassMesh);
 }
 
-function updateUrl() {
-  // Turns out this is causing a bug on Oculus browser, so I'm disabling
-  // it for now. Navigating to a bookmarked dinosaur will still work.
-  /*let hashString = `#dinosaur=${debugSettings.dinosaur}`;
-  if (debugEnabled) { hashString += '&debug=1'; }
-
-  window.location.hash = hashString;*/
-}
-
 function loadModel(key) {
-  debugSettings.dinosaur = key;
-  updateUrl();
-
   if (xrDinosaur) {
     scene.remove(xrDinosaur);
     xrDinosaur = null;

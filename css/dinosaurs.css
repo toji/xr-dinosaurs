@@ -240,6 +240,16 @@ main.loading>.lds-ellipsis {
   margin: auto;
 }
 
+#canvasContainer>.lds-ellipsis {
+  display: none;
+}
+
+#canvasContainer.loading>.lds-ellipsis {
+  display: block;
+  margin: auto;
+  margin-top: 25%;
+}
+
 .loading .main-menu {
   margin: 0;
   height: 0px;

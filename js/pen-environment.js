@@ -34,49 +34,49 @@ export class PenEnvironment extends THREE.Group {
 
     this._platformTargetHeight = 0;
 
-    this._scene = null;
+    this._loadedPromise = new Promise((resolve) => {
+      gltfLoader.setPath('media/models/environment/');
+      gltfLoader.load('compressed-optimized.glb', (gltf) => {
+        gltf.scene.updateMatrixWorld();
 
-    gltfLoader.setPath('media/models/environment/');
-    gltfLoader.load('compressed-optimized.glb', (gltf) => {
-      this._scene = gltf.scene;
-      this._scene.updateMatrixWorld();
+        let raisedPlatform = null;
+        gltf.scene.traverse((child) => {
+          if (child.isMesh) {
+            // Replace the MeshStandardMaterial for the pen with something cheaper
+            // to render, because we don't have proper physical materials for this
+            // model.
+            let newMaterial = new THREE.MeshLambertMaterial({
+              map: child.material.map,
+              alphaMap: child.material.alphaMap,
+              transparent: child.material.transparent,
+              side: child.material.side,
+            });
+            child.material = newMaterial;
+          }
+          if (child.name == 'Raised_Platform') {
+            raisedPlatform = child;
+          }
+        });
 
-      let raisedPlatform = null;
-      this._scene.traverse((child) => {
-        if (child.isMesh) {
-          // Replace the MeshStandardMaterial for the pen with something cheaper
-          // to render, because we don't have proper physical materials for this
-          // model.
-          let newMaterial = new THREE.MeshLambertMaterial({
-            map: child.material.map,
-            alphaMap: child.material.alphaMap,
-            transparent: child.material.transparent,
-            side: child.material.side,
-          });
-          child.material = newMaterial;
+        if (raisedPlatform) {
+          let raisedPlatformTransform = raisedPlatform.parent.matrixWorld;
+          raisedPlatform.parent.remove(raisedPlatform);
+          raisedPlatform.applyMatrix(raisedPlatformTransform);
+          this._platform.add(raisedPlatform);
         }
-        if (child.name == 'Raised_Platform') {
-          raisedPlatform = child;
-        }
+        
+        this.add(gltf.scene);
+        resolve(this);
       });
-
-      if (raisedPlatform) {
-        let raisedPlatformTransform = raisedPlatform.parent.matrixWorld;
-        raisedPlatform.parent.remove(raisedPlatform);
-        raisedPlatform.applyMatrix(raisedPlatformTransform);
-        this._platform.add(raisedPlatform);
-      }
-      
-      this.add(this._scene);
     });
+  }
+
+  get loaded() {
+    return this._loadedPromise;
   }
 
   get platform() {
     return this._platform;
-  }
-
-  get scene() {
-    return this._scene;
   }
 
   raisePlatform() {
