@@ -86,12 +86,12 @@ export class XRDinosaur extends THREE.Object3D {
 
   set envMap(value) {
     this._envMap = value;
-    /*this.traverse((child) => {
+    this.traverse((child) => {
       if (child.isMesh) {
         child.material.envMap = value;
-        child.material.uniformsNeedUpdate = true;
+        child.material.needsUpdate = true;
       }
-    });*/
+    });
   }
 
   scare() {

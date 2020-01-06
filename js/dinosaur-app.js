@@ -289,6 +289,9 @@ export function PreloadDinosaurApp(debug = false) {
   preloadPromise = skybox.getEnvMap().then((texture) => {
     envMap = texture;
     scene.background = envMap;
+    if (xrDinosaur) {
+      xrDinosaur.envMap = envMap;
+    }
   });
 
   return preloadPromise;
