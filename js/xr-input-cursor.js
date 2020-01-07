@@ -134,12 +134,7 @@ export class XRInputCursor extends THREE.Mesh {
     geometry.setAttribute('opacity', new THREE.InterleavedBufferAttribute(interleavedBuffer, 1, 3, false));
 
     let material = new THREE.ShaderMaterial({
-      /*uniforms: {
-        map: { value: rayTexture },
-      },*/
-
       transparent: true,
-      //blending: THREE.AdditiveBlending,
       depthWrite: false,
 
       vertexShader: `
