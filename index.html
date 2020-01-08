@@ -146,6 +146,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <article id='canvasContainer' class='hidden loading'>
       <div class='button-bar'>
         <button id='showSelection' alt='Select a different Dinosaur'>Back</button>
+        <button id='showDinosaurVR' alt='View Dinosaur in VR' class='hidden'>Enter VR</button>
+        <button id='showDinosaurAR' alt='View Dinosaur in AR' class='hidden'>Enter AR</button>
       </div>
 
       <div class='lds-ellipsis'>
@@ -188,12 +190,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       let closeSelectionButton = document.getElementById('closeSelection');
       let showSelectionButton = document.getElementById('showSelection');
+      let showDinosaurVRButton = document.getElementById('showDinosaurVR');
+      let showDinosaurARButton = document.getElementById('showDinosaurAR');
 
       let view2DButton = document.getElementById('view2DButton');
       let viewVRButton = document.getElementById('viewVRButton');
       let viewARButton = null; //document.getElementById('viewARButton');
 
       let vrSupported = false;
+      let arSupported = false;
 
       function updateAppState(pushState = true) {
         if (selecting) {
@@ -243,7 +248,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         updateAppState();
       });
 
-      viewVRButton.addEventListener('click', () => {
+      function startVR() {
         if (!vrSupported) return;
         selecting = false;
         landingPage.classList.add('hidden');
@@ -251,7 +256,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         containerElement.classList.remove('hidden');
         history.pushState(null, null, buildQueryArgs());
         RunDinosaurApp(containerElement, 'immersive-vr');
-      });
+      }
+
+      viewVRButton.addEventListener('click', startVR);
+      showDinosaurVRButton.addEventListener('click', startVR);
 
       // Wire up each of the dinosaur selection options
       let dinosaurOptions = document.querySelectorAll('#dinosaurList>li');
@@ -271,6 +279,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             vrSupported = supported;
             if (supported) {
               viewVRButton.classList.remove('disabled');
+              showDinosaurVRButton.classList.remove('hidden');
             } else {
               let errorMessage = document.createElement('p');
               errorMessage.innerText = 'Your browser supports WebXR, but Virtual Reality is not available';
@@ -281,8 +290,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         if (viewARButton) {
           navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+            arSupported = supported;
             if (supported) {
               viewARButton.classList.remove('disabled');
+              showDinosaurARButton.classList.remove('hidden');
             } else {
               let errorMessage = document.createElement('p');
               errorMessage.innerText = 'Your browser supports WebXR, but Augmented Reality is not available';

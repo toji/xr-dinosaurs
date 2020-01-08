@@ -162,14 +162,36 @@ li[data-dinosaur="trex"]:before {
   background-image: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%);
 }
 
-#showSelection {
+#canvasContainer .button-bar>button {
   margin: 1em;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
   text-indent: -9999px;
   width: 32px;
   height: 32px;
-  background-image: url('../media/textures/back-icon.svg');
-  background-color: transparent;
   border: 0;
+  cursor: pointer;
+}
+
+
+#canvasContainer .button-bar>button.hidden {
+  display: none;
+}
+
+#showSelection {
+  background-image: url('../media/textures/back-icon.svg');
+}
+
+#showDinosaurVR {
+  float: right;
+  background-image: url('../media/textures/vr-icon.svg');
+}
+
+#showDinosaurAR {
+  float: right;
+  background-image: url('../media/textures/ar-icon.svg');
 }
 
 /*

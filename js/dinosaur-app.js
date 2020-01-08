@@ -31,7 +31,6 @@ import * as THREE from './third-party/three.js/build/three.module.js';
 import { DRACOLoader } from './third-party/three.js/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from './third-party/three.js/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from './third-party/three.js/examples/jsm/controls/OrbitControls.js';
-import { VRButton } from './third-party/three.js/examples/jsm/webxr/VRButton.js';
 import { PenEnvironment } from './pen-environment.js';
 
 // VR Button Layout
@@ -48,7 +47,7 @@ const MIN_BUTTON_HEIGHT = 0.3;
 const MAX_BUTTON_HEIGHT = 1.1;
 const BUTTON_HEIGHT_DEADZONE = 0.15;
 
-let preloadPromise, vrButton, appRunning = false;
+let preloadPromise, appRunning = false;
 let stats, controls;
 let camera, scene, renderer;
 let viewerProxy;
@@ -60,6 +59,7 @@ let environment;
 let controller0, controller1;
 let skybox, envMap;
 let buttonManager, buttonGroup, targetButtonGroupHeight;
+let xrSession, xrMode;
 
 let textureLoader = new THREE.TextureLoader();
 let audioLoader = new THREE.AudioLoader();
@@ -233,12 +233,6 @@ export function PreloadDinosaurApp(debug = false) {
     stats.drawOrthographic = false;
   }
 
-  let buttonBar = document.querySelector('#canvasContainer .button-bar');
-  vrButton = VRButton.createButton(renderer);
-  vrButton.style.top = '0.6em';
-  vrButton.style.bottom = '';
-  buttonBar.appendChild(vrButton);
-
   renderer.xr.addEventListener('sessionstart', () => {
     initControllers();
 
@@ -270,6 +264,9 @@ export function PreloadDinosaurApp(debug = false) {
   });
 
   renderer.xr.addEventListener('sessionend', () => {
+    xrSession = null;
+    xrMode = null;
+
     // Stop ambient jungle sounds once the user exits VR.
     if (ambientSounds) {
       ambientSounds.stop();
@@ -332,7 +329,22 @@ export function RunDinosaurApp(container, xrSessionMode = null) {
   // If the app was requested to start up immediately into a given XR session
   // mode, do so now.
   if (xrSessionMode) {
-    vrButton.onclick();
+    startXRSession(xrSessionMode);
+  }
+}
+
+function startXRSession(mode) {
+  if (xrSession) {
+    xrSession.end();
+  } else {
+    navigator.xr.requestSession(mode, {
+      requiredFeatures: ['local-floor']
+    }).then((session) => {
+      xrSession = session;
+      xrMode = mode;
+      renderer.xr.setReferenceSpaceType('local-floor');
+      renderer.xr.setSession(session);
+    });
   }
 }
 
