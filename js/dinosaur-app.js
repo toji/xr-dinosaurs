@@ -33,6 +33,8 @@ import { GLTFLoader } from './third-party/three.js/examples/jsm/loaders/GLTFLoad
 import { OrbitControls } from './third-party/three.js/examples/jsm/controls/OrbitControls.js';
 import { PenEnvironment } from './pen-environment.js';
 
+import { XRControllerModelLoader } from './xr-controller-model-loader.js';
+
 // VR Button Layout
 const ROW_LENGTH = 4;
 const BUTTON_SPACING = 0.25;
@@ -57,9 +59,11 @@ let blobShadowManager;
 let cursorManager;
 let environment;
 let controller0, controller1;
+let controllerModel0, controllerModel1;
 let skybox, envMap;
 let buttonManager, buttonGroup, targetButtonGroupHeight;
 let xrSession, xrMode;
+let xrControllerModelLoader;
 
 let textureLoader = new THREE.TextureLoader();
 let audioLoader = new THREE.AudioLoader();
@@ -135,38 +139,43 @@ function initControllers() {
   }
 
   // VR controller trackings
-  function updateControllerVisualization(controller, inputSource) {
+  function updateControllerVisualization(controllerModel, inputSource) {
     let showRay = inputSource &&
                   inputSource.targetRayMode == 'tracked-pointer';
-    controller.userData.inputRay.visible = showRay;
+    controllerModel.rayVisible = showRay;
   }
 
-  let inputRay = new XRInputRay();
-  inputRay.scale.z = 2;
+  //let inputRay = new XRInputRay();
+  //inputRay.scale.z = 2;
 
   controller0 = renderer.xr.getController(0);
-  controller0.userData.inputRay = inputRay.clone();
-  controller0.add(controller0.userData.inputRay);
-  updateControllerVisualization(controller0, null);
+  controllerModel0 = xrControllerModelLoader.getControllerModel(controller0);
+  controller0.add(controllerModel0);
+  updateControllerVisualization(controllerModel0, null);
   controller0.addEventListener('connected', (event) => {
-    updateControllerVisualization(controller0, event.data);
+    updateControllerVisualization(controllerModel0, event.data);
   });
   buttonManager.addController(controller0);
   environment.platform.add(controller0);
 
   controller1 = renderer.xr.getController(1);
-  controller1.userData.inputRay = inputRay.clone();
-  controller1.add(controller1.userData.inputRay);
-  updateControllerVisualization(controller1);
-  controller0.addEventListener('connected', (event) => {
-    updateControllerVisualization(controller1, event.data);
+  controllerModel1 = xrControllerModelLoader.getControllerModel(controller1);
+  controller1.add(controllerModel1);
+  updateControllerVisualization(controllerModel1, null);
+  controller1.addEventListener('connected', (event) => {
+    updateControllerVisualization(controllerModel1, event.data);
   });
   buttonManager.addController(controller1);
   environment.platform.add(controller1);
 
-  gltfLoader.setPath('media/models/controller/');
+  if (envMap) {
+    controllerModel0.envMap = envMap;
+    controllerModel1.envMap = envMap;
+  }
+
+  /*gltfLoader.setPath('media/models/controller/');
   gltfLoader.load('controller.gltf', (gltf) => { controller0.add(gltf.scene); });
-  gltfLoader.load('controller-left.gltf', (gltf) => { controller1.add(gltf.scene); });
+  gltfLoader.load('controller-left.gltf', (gltf) => { controller1.add(gltf.scene); });*/
 }
 
 export function PreloadDinosaurApp(debug = false) {
@@ -187,6 +196,8 @@ export function PreloadDinosaurApp(debug = false) {
   xrDinosaurLoader = new XRDinosaurLoader(gltfLoader);
   blobShadowManager = new BlobShadowManager(textureLoader.load('media/textures/shadow.png'));
   scene.add(blobShadowManager);
+
+  xrControllerModelLoader = new XRControllerModelLoader(gltfLoader, 'js/third-party/webxr-input-profiles/packages/assets/dist/profiles')
 
   environment = new PenEnvironment(gltfLoader);
   scene.add(environment);
@@ -288,6 +299,12 @@ export function PreloadDinosaurApp(debug = false) {
     scene.background = envMap;
     if (xrDinosaur) {
       xrDinosaur.envMap = envMap;
+    }
+    if (controllerModel0) {
+      controllerModel0.envMap = envMap;
+    }
+    if (controllerModel1) {
+      controllerModel1.envMap = envMap;
     }
   });
 
