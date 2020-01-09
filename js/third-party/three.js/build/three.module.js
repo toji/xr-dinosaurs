@@ -22988,7 +22988,8 @@ function WebXRManager( renderer, gl ) {
 
 			var layerInit = {
 				antialias: attributes.antialias,
-				alpha: attributes.alpha,
+				// Hack to improve perf on Oculus hardware
+				alpha: true, // attributes.alpha,
 				depth: attributes.depth,
 				stencil: attributes.stencil
 			};
