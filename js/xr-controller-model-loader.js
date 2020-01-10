@@ -108,7 +108,7 @@ class ControllerNode extends THREE.Object3D {
       this.loaded = true;
     } catch (error) {
       this.clear();
-      AssetError.log(error.message);
+      console.error(error.message);
       throw error;
     }
   }
@@ -121,11 +121,11 @@ class ControllerNode extends THREE.Object3D {
         // Find the node to attach the touch dot.
         const touchPointRoot = this.rootNode.getObjectByName(component.touchPointNodeName, true);
         if (!touchPointRoot) {
-          AssetError.log(`Could not find touch dot, ${component.touchPointNodeName}, in touchpad component ${componentId}`);
+          console.error(`Could not find touch dot, ${component.touchPointNodeName}, in touchpad component ${componentId}`);
         } else {
-          const sphereGeometry = new SphereGeometry(0.001);
-          const material = new MeshBasicMaterial({ color: 0x0000FF });
-          const sphere = new Mesh(sphereGeometry, material);
+          const sphereGeometry = new THREE.SphereGeometry(0.001);
+          const material = new THREE.MeshBasicMaterial({ color: 0x0000FF });
+          const sphere = new THREE.Mesh(sphereGeometry, material);
           touchPointRoot.add(sphere);
         }
       }
@@ -158,11 +158,11 @@ class ControllerNode extends THREE.Object3D {
 
           // If the extents cannot be found, skip this animation
           if (!nodes[minNodeName]) {
-            AssetError.log(`Could not find ${minNodeName} in the model`);
+            console.error(`Could not find ${minNodeName} in the model`);
             return;
           }
           if (!nodes[maxNodeName]) {
-            AssetError.log(`Could not find ${maxNodeName} in the model`);
+            console.error(`Could not find ${maxNodeName} in the model`);
             return;
           }
         }
@@ -170,7 +170,7 @@ class ControllerNode extends THREE.Object3D {
         // If the target node cannot be found, skip this animation
         nodes[valueNodeName] = this.rootNode.getObjectByName(valueNodeName);
         if (!nodes[valueNodeName]) {
-          AssetError.log(`Could not find ${valueNodeName} in the model`);
+          console.error(`Could not find ${valueNodeName} in the model`);
         }
       });
     });

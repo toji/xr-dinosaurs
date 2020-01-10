@@ -1,0 +1,14 @@
+{
+  "generic-button": "generic-button/profile.json",
+  "generic-touchpad": "generic-touchpad/profile.json",
+  "generic-trigger-squeeze-thumbstick": "generic-trigger-squeeze-thumbstick/profile.json",
+  "generic-trigger-squeeze-touchpad-thumbstick": "generic-trigger-squeeze-touchpad-thumbstick/profile.json",
+  "generic-trigger-squeeze-touchpad": "generic-trigger-squeeze-touchpad/profile.json",
+  "generic-trigger-squeeze": "generic-trigger-squeeze/profile.json",
+  "generic-trigger-thumbstick": "generic-trigger-thumbstick/profile.json",
+  "generic-trigger-touchpad-thumbstick": "generic-trigger-touchpad-thumbstick/profile.json",
+  "generic-trigger-touchpad": "generic-trigger-touchpad/profile.json",
+  "generic-trigger": "generic-trigger/profile.json",
+  "microsoft-mixed-reality": "microsoft-mixed-reality/profile.json",
+  "samsung-odyssey": "samsung-odyssey/profile.json"
+}

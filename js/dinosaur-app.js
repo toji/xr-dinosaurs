@@ -509,7 +509,7 @@ function onWindowResize() {
   renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
-function render() {
+function render(time, xrFrame) {
   let delta = clock.getDelta();
   if(xrDinosaur && debugSettings.animate) {
     xrDinosaur.update(delta);
