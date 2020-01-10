@@ -19,165 +19,85 @@
 // SOFTWARE.
 
 import * as THREE from './third-party/three.js/build/three.module.js';
-import { XRInputRay } from './xr-input-ray.js';
 
 import { Constants as Constants$1, fetchProfile, MotionController } from './third-party/webxr-input-profiles/packages/motion-controllers/dist/motion-controllers.module.js';
 
-class ControllerNode extends THREE.Object3D {
+class ControllerModel extends THREE.Object3D {
   constructor() {
     super();
-
-    this._ray = null;
-    this._envMap = null;
-
-    // BIG TODO: Currently Three.js only interacts with the targetRaySpace,
-    // which means the controllers handles won't be in the right place. Need to
-    // get the transform from the targetRaySpace to the gripSpace (maybe per-frame?)
-    // and apply that to the glTF mesh to have everything line up correctly.
-    // (Rays will still be positioned at the targetRaySpace, obviously.)
+    this.xrInputSource = null;
+    this.motionController = null;
+    this.asset = null;
+    this.rootNode = null;
+    this.nodes = {};
+    this.loaded = false;
+    this.envMap = null;
   }
 
-  get rayVisible() {
-    return this._ray ? this._ray.visible : false;
-  }
-
-  set rayVisible(value) {
-    // Build the selection ray if this is the first time it's been requested.
-    if (value && !this._ray) {
-      this._ray = new XRInputRay();
-      this.add(this._ray);
-    } else if (this._ray) {
-      this._ray.visible = value;
+  async initialize(motionController, gltfLoader) {
+    if (this.motionController && this.motionController != motionController) {
+      this.reset();
     }
+    this.motionController = motionController;
+    this.xrInputSource = this.motionController.xrInputSource;
+
+    // Fetch the assets and generate threejs objects for it
+    this.asset = await new Promise(((resolve, reject) => {
+      gltfLoader.load(
+        motionController.assetUrl,
+        (loadedAsset) => { resolve(loadedAsset); },
+        null,
+        () => { reject(new AssetError(`Asset ${motionController.assetUrl} missing or malformed.`)); }
+      );
+    }));
+
+    if (this.envMap) {
+      this.asset.scene.traverse((child) => {
+        if (child.isMesh) {
+          child.material.envMap = this.envMap;
+        }
+      });
+    }
+
+    this.rootNode = this.asset.scene;
+    this.addTouchDots();
+    this.findNodes();
+    this.add(this.rootNode);
+    this.loaded = true;
   }
 
-  set envMap(value) {
-    this._envMap = value;
+  reset() {
+    this.motionController = null;
+    this.xrInputSource = null;
+    this.nodes = {};
+    this.asset = null;
+
+    if (this.rootNode) {
+      this.remove(this.rootNode);
+      this.rootNode = null;
+    }
+
+    this.loaded = false;
+  }
+
+  setEnvironmentMap(envMap) {
+    if (this.envMap == envMap) {
+      return;
+    }
+
+    this.envMap = envMap;
     this.traverse((child) => {
       if (child.isMesh) {
-        child.material.envMap = value;
+        child.material.envMap = this.envMap;
         child.material.needsUpdate = true;
       }
     });
   }
 
-  get envMap() {
-    return this._envMap;
-  }
-
-  clear() {
-    if (this.rootNode) {
-      this.remove(this.rootNode);
-    }
-
-    this.isMock = undefined;
-    this.asset = null;
-    this.rootNode = null;
-    this.nodes = null;
-    this.motionController = null;
-    this.loaded = false;
-  }
-
-  async load(motionController, gltfLoader) {
-    this.clear();
-    this.motionController = motionController;
-    try {
-      this.asset = await new Promise(((resolve, reject) => {
-        gltfLoader.load(
-          this.motionController.assetUrl,
-          (loadedAsset) => { resolve(loadedAsset); },
-          null,
-          () => { reject(new Error(`Asset ${this.motionController.assetUrl} missing or malformed.`)); }
-        );
-      }));
-
-      this.rootNode = this.asset.scene;
-      if (this._envMap) {
-        this.rootNode.traverse((child) => {
-          if (child.isMesh) {
-            child.material.envMap = this._envMap;
-            child.material.needsUpdate = true;
-          }
-        });
-      }
-      this.findNodes();
-      this.addTouchDots();
-
-      // Set the new model
-      this.add(this.rootNode);
-      this.loaded = true;
-    } catch (error) {
-      this.clear();
-      console.error(error.message);
-      throw error;
-    }
-  }
-
-  addTouchDots() {
-    Object.keys(this.motionController.components).forEach((componentId) => {
-      const component = this.motionController.components[componentId];
-      // Find the touchpads
-      if (component.type === Constants$1.ComponentType.TOUCHPAD) {
-        // Find the node to attach the touch dot.
-        const touchPointRoot = this.rootNode.getObjectByName(component.touchPointNodeName, true);
-        if (!touchPointRoot) {
-          console.error(`Could not find touch dot, ${component.touchPointNodeName}, in touchpad component ${componentId}`);
-        } else {
-          const sphereGeometry = new THREE.SphereGeometry(0.001);
-          const material = new THREE.MeshBasicMaterial({ color: 0x0000FF });
-          const sphere = new THREE.Mesh(sphereGeometry, material);
-          touchPointRoot.add(sphere);
-        }
-      }
-    });
-  }
-
   /**
-   * @description Walks the model's tree to find the nodes needed to animate the components and
-   * saves them for use in the frame loop
+   * Polls data from the XRInputSource and updates the model's components to match
+   * the real world data
    */
-  findNodes() {
-    const nodes = {};
-
-    // Loop through the components and find the nodes needed for each components' visual responses
-    Object.values(this.motionController.components).forEach((component) => {
-      const { touchPointNodeName, visualResponses } = component;
-      if (touchPointNodeName) {
-        nodes[touchPointNodeName] = this.rootNode.getObjectByName(touchPointNodeName);
-      }
-
-      // Loop through all the visual responses to be applied to this component
-      Object.values(visualResponses).forEach((visualResponse) => {
-        const {
-          valueNodeName, minNodeName, maxNodeName, valueNodeProperty
-        } = visualResponse;
-        // If animating a transform, find the two nodes to be interpolated between.
-        if (valueNodeProperty === Constants$1.VisualResponseProperty.TRANSFORM) {
-          nodes[minNodeName] = this.rootNode.getObjectByName(minNodeName);
-          nodes[maxNodeName] = this.rootNode.getObjectByName(maxNodeName);
-
-          // If the extents cannot be found, skip this animation
-          if (!nodes[minNodeName]) {
-            console.error(`Could not find ${minNodeName} in the model`);
-            return;
-          }
-          if (!nodes[maxNodeName]) {
-            console.error(`Could not find ${maxNodeName} in the model`);
-            return;
-          }
-        }
-
-        // If the target node cannot be found, skip this animation
-        nodes[valueNodeName] = this.rootNode.getObjectByName(valueNodeName);
-        if (!nodes[valueNodeName]) {
-          console.error(`Could not find ${valueNodeName} in the model`);
-        }
-      });
-    });
-
-    this.nodes = nodes;
-  }
-
   updateMatrixWorld(force) {
     super.updateMatrixWorld(force);
 
@@ -223,6 +143,72 @@ class ControllerNode extends THREE.Object3D {
       });
     });
   }
+
+  /**
+   * Walks the model's tree to find the nodes needed to animate the components and
+   * saves them for use in the frame loop
+   */
+  findNodes() {
+    this.nodes = {};
+
+    // Loop through the components and find the nodes needed for each components' visual responses
+    Object.values(this.motionController.components).forEach((component) => {
+      const { touchPointNodeName, visualResponses } = component;
+      if (touchPointNodeName) {
+        this.nodes[touchPointNodeName] = this.rootNode.getObjectByName(touchPointNodeName);
+      }
+
+      // Loop through all the visual responses to be applied to this component
+      Object.values(visualResponses).forEach((visualResponse) => {
+        const {
+          valueNodeName, minNodeName, maxNodeName, valueNodeProperty
+        } = visualResponse;
+        // If animating a transform, find the two nodes to be interpolated between.
+        if (valueNodeProperty === Constants$1.VisualResponseProperty.TRANSFORM) {
+          this.nodes[minNodeName] = this.rootNode.getObjectByName(minNodeName);
+          this.nodes[maxNodeName] = this.rootNode.getObjectByName(maxNodeName);
+
+          // If the extents cannot be found, skip this animation
+          if (!this.nodes[minNodeName]) {
+            AssetError.log(`Could not find ${minNodeName} in the model`);
+            return;
+          }
+          if (!this.nodes[maxNodeName]) {
+            AssetError.log(`Could not find ${maxNodeName} in the model`);
+            return;
+          }
+        }
+
+        // If the target node cannot be found, skip this animation
+        this.nodes[valueNodeName] = this.rootNode.getObjectByName(valueNodeName);
+        if (!this.nodes[valueNodeName]) {
+          AssetError.log(`Could not find ${valueNodeName} in the model`);
+        }
+      });
+    });
+  }
+
+  /**
+   * Add touch dots to all touchpad components so the finger can be seen
+   */
+  addTouchDots() {
+    Object.keys(this.motionController.components).forEach((componentId) => {
+      const component = this.motionController.components[componentId];
+      // Find the touchpads
+      if (component.type === Constants$1.ComponentType.TOUCHPAD) {
+        // Find the node to attach the touch dot.
+        const touchPointRoot = this.rootNode.getObjectByName(component.touchPointNodeName, true);
+        if (!touchPointRoot) {
+          AssetError.log(`Could not find touch dot, ${component.touchPointNodeName}, in touchpad component ${componentId}`);
+        } else {
+          const sphereGeometry = new THREE.SphereGeometry(0.001);
+          const material = new THREE.MeshBasicMaterial({ color: 0x0000FF });
+          const sphere = new THREE.Mesh(sphereGeometry, material);
+          touchPointRoot.add(sphere);
+        }
+      }
+    });
+  }
 }
 
 export class XRControllerModelLoader {
@@ -232,7 +218,7 @@ export class XRControllerModelLoader {
   }
 
   getControllerModel(controller) {
-    let controllerModel = new ControllerNode();
+    let controllerModel = new ControllerModel();
 
     controller.addEventListener('connected', (event) => {
       const xrInputSource = event.data;
@@ -244,12 +230,12 @@ export class XRControllerModelLoader {
         );
         
         this._gltfLoader.setPath('');
-        controllerModel.load(motionController, this._gltfLoader);
+        controllerModel.initialize(motionController, this._gltfLoader);
       });
     });
 
     controller.addEventListener('disconnected', (event) => {
-      controllerModel.clear();
+      controllerModel.reset();
     });
 
     return controllerModel;

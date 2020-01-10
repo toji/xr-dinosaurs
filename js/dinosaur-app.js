@@ -58,8 +58,7 @@ let xrDinosaurLoader, xrDinosaur;
 let blobShadowManager;
 let cursorManager;
 let environment;
-let controller0, controller1;
-let controllerModel0, controllerModel1;
+let controllers = [];
 let skybox, envMap;
 let buttonManager, buttonGroup, targetButtonGroupHeight;
 let xrSession, xrMode;
@@ -134,48 +133,38 @@ function initDebugUI() {
 }
 
 function initControllers() {
-  if (controller0) {
+  if (controllers.length) {
     return;
   }
 
   // VR controller trackings
-  function updateControllerVisualization(controllerModel, inputSource) {
-    let showRay = inputSource &&
-                  inputSource.targetRayMode == 'tracked-pointer';
-    controllerModel.rayVisible = showRay;
+  let inputRay = new XRInputRay();
+  inputRay.scale.z = 2;
+
+  function buildController(index) {
+    let targetRay = renderer.xr.getController(index);
+    let grip = renderer.xr.getControllerGrip(index);
+    let model = xrControllerModelLoader.getControllerModel(grip);
+
+    targetRay.add(inputRay.clone());
+    grip.add(model);
+
+    buttonManager.addController(targetRay);
+    environment.platform.add(targetRay);
+    environment.platform.add(grip);
+
+    if (envMap) {
+      model.setEnvironmentMap(envMap);
+    }
+
+    return {
+      targetRay,
+      grip,
+      model
+    };
   }
 
-  //let inputRay = new XRInputRay();
-  //inputRay.scale.z = 2;
-
-  controller0 = renderer.xr.getController(0);
-  controllerModel0 = xrControllerModelLoader.getControllerModel(controller0);
-  controller0.add(controllerModel0);
-  updateControllerVisualization(controllerModel0, null);
-  controller0.addEventListener('connected', (event) => {
-    updateControllerVisualization(controllerModel0, event.data);
-  });
-  buttonManager.addController(controller0);
-  environment.platform.add(controller0);
-
-  controller1 = renderer.xr.getController(1);
-  controllerModel1 = xrControllerModelLoader.getControllerModel(controller1);
-  controller1.add(controllerModel1);
-  updateControllerVisualization(controllerModel1, null);
-  controller1.addEventListener('connected', (event) => {
-    updateControllerVisualization(controllerModel1, event.data);
-  });
-  buttonManager.addController(controller1);
-  environment.platform.add(controller1);
-
-  if (envMap) {
-    controllerModel0.envMap = envMap;
-    controllerModel1.envMap = envMap;
-  }
-
-  /*gltfLoader.setPath('media/models/controller/');
-  gltfLoader.load('controller.gltf', (gltf) => { controller0.add(gltf.scene); });
-  gltfLoader.load('controller-left.gltf', (gltf) => { controller1.add(gltf.scene); });*/
+  controllers.push(buildController(0), buildController(1));
 }
 
 export function PreloadDinosaurApp(debug = false) {
@@ -257,7 +246,7 @@ export function PreloadDinosaurApp(debug = false) {
       stats.position.set(0, -0.07, 0);
       stats.rotation.set(Math.PI * -0.5, Math.PI, 0);
       scene.remove(stats);
-      controller0.add(stats);
+      controllers[0].grip.add(stats);
     }
 
     // Load and play ambient jungle sounds once the user enters VR.
@@ -300,11 +289,8 @@ export function PreloadDinosaurApp(debug = false) {
     if (xrDinosaur) {
       xrDinosaur.envMap = envMap;
     }
-    if (controllerModel0) {
-      controllerModel0.envMap = envMap;
-    }
-    if (controllerModel1) {
-      controllerModel1.envMap = envMap;
+    for (let controller of controllers) {
+      controller.model.setEnvironmentMap(envMap);
     }
   });
 
@@ -535,7 +521,9 @@ function render(time, xrFrame) {
   }
 
   buttonManager.update(delta);
-  cursorManager.update([controller0, controller1]);
+  if (controllers.length) {
+    cursorManager.update([controllers[0].targetRay, controllers[1].targetRay]);
+  }
 
   if (takeScreenshot) {
     renderer.setPixelRatio(window.devicePixelRatio * 2);
