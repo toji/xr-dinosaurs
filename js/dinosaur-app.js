@@ -146,6 +146,11 @@ function initControllers() {
     let grip = renderer.xr.getControllerGrip(index);
     let model = xrControllerModelLoader.getControllerModel(grip);
 
+    targetRay.addEventListener('connected', (event) => {
+      const xrInputSource = event.data;
+      targetRay.visible = xrInputSource !== 'gaze';
+    });
+
     targetRay.add(inputRay.clone());
     grip.add(model);
 

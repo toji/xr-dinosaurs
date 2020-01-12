@@ -47,7 +47,7 @@ class ControllerModel extends THREE.Object3D {
         motionController.assetUrl,
         (loadedAsset) => { resolve(loadedAsset); },
         null,
-        () => { reject(new AssetError(`Asset ${motionController.assetUrl} missing or malformed.`)); }
+        () => { reject(new Error(`Asset ${motionController.assetUrl} missing or malformed.`)); }
       );
     }));
 
@@ -170,11 +170,11 @@ class ControllerModel extends THREE.Object3D {
 
           // If the extents cannot be found, skip this animation
           if (!this.nodes[minNodeName]) {
-            AssetError.log(`Could not find ${minNodeName} in the model`);
+            console.warn(`Could not find ${minNodeName} in the model`);
             return;
           }
           if (!this.nodes[maxNodeName]) {
-            AssetError.log(`Could not find ${maxNodeName} in the model`);
+            console.warn(`Could not find ${maxNodeName} in the model`);
             return;
           }
         }
@@ -182,7 +182,7 @@ class ControllerModel extends THREE.Object3D {
         // If the target node cannot be found, skip this animation
         this.nodes[valueNodeName] = this.rootNode.getObjectByName(valueNodeName);
         if (!this.nodes[valueNodeName]) {
-          AssetError.log(`Could not find ${valueNodeName} in the model`);
+          console.warn(`Could not find ${valueNodeName} in the model`);
         }
       });
     });
@@ -199,7 +199,7 @@ class ControllerModel extends THREE.Object3D {
         // Find the node to attach the touch dot.
         const touchPointRoot = this.rootNode.getObjectByName(component.touchPointNodeName, true);
         if (!touchPointRoot) {
-          AssetError.log(`Could not find touch dot, ${component.touchPointNodeName}, in touchpad component ${componentId}`);
+          console.warn(`Could not find touch dot, ${component.touchPointNodeName}, in touchpad component ${componentId}`);
         } else {
           const sphereGeometry = new THREE.SphereGeometry(0.001);
           const material = new THREE.MeshBasicMaterial({ color: 0x0000FF });
