@@ -231,6 +231,8 @@ export class XRControllerModelLoader {
         
         this._gltfLoader.setPath('');
         controllerModel.initialize(motionController, this._gltfLoader);
+      }).catch((err) => {
+        console.warn(err);
       });
     });
 
