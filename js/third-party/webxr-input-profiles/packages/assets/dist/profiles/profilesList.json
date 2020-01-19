@@ -10,7 +10,13 @@
   "generic-trigger-touchpad": "generic-trigger-touchpad/profile.json",
   "generic-trigger": "generic-trigger/profile.json",
   "google-daydream": "google-daydream/profile.json",
+  "htc-vive-focus": "htc-vive-focus/profile.json",
+  "htc-vive": "htc-vive/profile.json",
   "microsoft-mixed-reality": "microsoft-mixed-reality/profile.json",
+  "oculus-go": "oculus-go/profile.json",
   "oculus-touch-v2": "oculus-touch-v2/profile.json",
-  "samsung-odyssey": "samsung-odyssey/profile.json"
+  "oculus-touch": "oculus-touch/profile.json",
+  "samsung-gearvr": "samsung-gearvr/profile.json",
+  "samsung-odyssey": "samsung-odyssey/profile.json",
+  "valve-index": "valve-index/profile.json"
 }
