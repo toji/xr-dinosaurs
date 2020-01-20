@@ -20,7 +20,10 @@
 
 import * as THREE from './third-party/three.js/build/three.module.js';
 
-import { Constants as Constants$1, fetchProfile, MotionController } from './third-party/webxr-input-profiles/packages/motion-controllers/dist/motion-controllers.module.js';
+import { Constants as Constants$1, fetchProfile, MotionController } from 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/motion-controllers@0.1.0/dist/motion-controllers.module.js'
+//import { Constants as Constants$1, fetchProfile, MotionController } from './third-party/webxr-input-profiles/packages/motion-controllers/dist/motion-controllers.module.js';
+
+const DEFAULT_PROFILES_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@0.1.0/dist/profiles'
 
 class ControllerModel extends THREE.Object3D {
   constructor() {
@@ -212,7 +215,7 @@ class ControllerModel extends THREE.Object3D {
 }
 
 export class XRControllerModelLoader {
-  constructor(gltfLoader, profilesRootPath) {
+  constructor(gltfLoader, profilesRootPath = DEFAULT_PROFILES_PATH) {
     this._gltfLoader = gltfLoader;
     this._profilesRootPath = profilesRootPath;
   }

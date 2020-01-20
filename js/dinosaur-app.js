@@ -191,7 +191,7 @@ export function PreloadDinosaurApp(debug = false) {
   blobShadowManager = new BlobShadowManager(textureLoader.load('media/textures/shadow.png'));
   scene.add(blobShadowManager);
 
-  xrControllerModelLoader = new XRControllerModelLoader(gltfLoader, 'js/third-party/webxr-input-profiles/packages/assets/dist/profiles')
+  xrControllerModelLoader = new XRControllerModelLoader(gltfLoader/*, 'js/third-party/webxr-input-profiles/packages/assets/dist/profiles'*/);
 
   environment = new PenEnvironment(gltfLoader);
   scene.add(environment);
