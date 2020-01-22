@@ -63,6 +63,8 @@ let skybox, envMap;
 let buttonManager, buttonGroup, targetButtonGroupHeight;
 let xrSession, xrMode;
 let xrControllerModelLoader;
+let placementMode = false;
+let hitTestSource;
 
 let textureLoader = new THREE.TextureLoader();
 let audioLoader = new THREE.AudioLoader();
@@ -110,7 +112,7 @@ function initDebugUI() {
   let guiRenderingFolder = gui.addFolder('Rendering Options');
   guiRenderingFolder.add(debugSettings, 'drawSkybox').onFinishChange(() => {
     if (debugSettings.drawSkybox) {
-      scene.background = skybox;
+      scene.background = envMap;
     } else {
       scene.background = null;
     }
@@ -271,6 +273,8 @@ export function PreloadDinosaurApp(debug = false) {
   renderer.xr.addEventListener('sessionend', () => {
     xrSession = null;
     xrMode = null;
+    hitTestSource = null;
+    placementMode = false;
 
     // Stop ambient jungle sounds once the user exits VR.
     if (ambientSounds) {
@@ -285,6 +289,15 @@ export function PreloadDinosaurApp(debug = false) {
     if (stats && debugEnabled) {
       stats.drawOrthographic = true;
     }
+
+    // When exiting AR mode we need to re-enable the environment rendering
+    if (debugSettings.drawSkybox) {
+      scene.background = envMap;
+    } else {
+      scene.background = null;
+    }
+    environment.visible = debugSettings.drawEnvironment;
+    buttonGroup.visible = debugSettings.drawButtons;
   });
 
   skybox = new HDRSkybox(renderer, 'media/textures/equirectangular/', 'misty_pines_2k.hdr');
@@ -347,22 +360,40 @@ function startXRSession(mode) {
   } else {
     navigator.xr.requestSession(mode, {
       requiredFeatures: ['local-floor']
-    }).then((session) => {
+    }).then(async (session) => {
       xrSession = session;
       xrMode = mode;
       renderer.xr.setReferenceSpaceType('local-floor');
       renderer.xr.setSession(session);
+
+      if (xrMode == 'immersive-ar') {
+        // Stop rendering the environment in AR mode
+        scene.background = null;
+        environment.visible = false;
+        buttonGroup.visible = false;
+
+        if ('requestHitTestSource' in xrSession) {
+          placementMode = true;
+
+          xrSession.addEventListener('select', () => {
+            placementMode = false;
+          });
+
+          let viewerSpace = await xrSession.requestReferenceSpace('viewer');
+          hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+        }
+      }
     });
   }
 }
 
-export function RunDinosaurAppWithModel(container, model) {
+export function RunDinosaurAppWithModel(container, model, xrSessionMode = null) {
   // Ensure the app content has been loaded (will early terminate if already
   // called).
   PreloadDinosaurApp();
 
   loadModel(model).then(() => {
-    RunDinosaurApp(container);
+    RunDinosaurApp(container, xrSessionMode);
   });
 }
 
@@ -503,29 +534,44 @@ function onWindowResize() {
 function render(time, xrFrame) {
   let delta = clock.getDelta();
   if(xrDinosaur && debugSettings.animate) {
-    xrDinosaur.update(delta);
+    if (!placementMode) {
+      xrDinosaur.update(delta);
+    }
     blobShadowManager.update();
   }
 
-  environment.update(delta);
+  if (placementMode && hitTestSource) {
+    let hitTestResults = xrFrame.getHitTestResults(hitTestSource);
+    if (hitTestResults.length > 0) {
+      let pose = hitTestResults[0].getPose(renderer.xr.getReferenceSpace());
 
-  // Update the button height to always stay within a reasonable range of the user's head
-  if (renderer.xr.isPresenting && buttonGroup) {
-    let worldPosition = new THREE.Vector3();
-    viewerProxy.getWorldPosition(worldPosition);
-
-    let idealPosition = Math.max(MIN_BUTTON_HEIGHT,
-                        Math.min(MAX_BUTTON_HEIGHT,
-                                 (worldPosition.y - environment.platform.position.y) + IDEAL_RELATIVE_BUTTON_HEIGHT));
-    if (Math.abs(idealPosition - buttonGroup.position.y) > BUTTON_HEIGHT_DEADZONE) {
-      targetButtonGroupHeight = idealPosition;
+      xrDinosaur.position.copy(pose.transform.position);
+      blobShadowManager.position.y = pose.transform.position.y;
     }
-
-    // Ease into the target position
-    buttonGroup.position.y += (targetButtonGroupHeight - buttonGroup.position.y) * 0.05;
   }
 
-  buttonManager.update(delta);
+  if (xrMode != 'immersive-ar') {
+    environment.update(delta);
+
+    // Update the button height to always stay within a reasonable range of the user's head
+    if (renderer.xr.isPresenting && buttonGroup) {
+      let worldPosition = new THREE.Vector3();
+      viewerProxy.getWorldPosition(worldPosition);
+
+      let idealPosition = Math.max(MIN_BUTTON_HEIGHT,
+                          Math.min(MAX_BUTTON_HEIGHT,
+                                  (worldPosition.y - environment.platform.position.y) + IDEAL_RELATIVE_BUTTON_HEIGHT));
+      if (Math.abs(idealPosition - buttonGroup.position.y) > BUTTON_HEIGHT_DEADZONE) {
+        targetButtonGroupHeight = idealPosition;
+      }
+
+      // Ease into the target position
+      buttonGroup.position.y += (targetButtonGroupHeight - buttonGroup.position.y) * 0.05;
+    }
+
+    buttonManager.update(delta);
+  }
+
   if (controllers.length) {
     cursorManager.update([controllers[0].targetRay, controllers[1].targetRay]);
   }

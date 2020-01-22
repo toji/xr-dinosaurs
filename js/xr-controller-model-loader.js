@@ -225,18 +225,20 @@ export class XRControllerModelLoader {
 
     controller.addEventListener('connected', (event) => {
       const xrInputSource = event.data;
-      fetchProfile(xrInputSource, this._profilesRootPath).then(({profile, assetPath}) => {
-        const motionController = new MotionController(
-          xrInputSource,
-          profile,
-          assetPath
-        );
-        
-        this._gltfLoader.setPath('');
-        controllerModel.initialize(motionController, this._gltfLoader);
-      }).catch((err) => {
-        console.warn(err);
-      });
+      if (xrInputSource.targetRayMode === 'tracked-pointer') {
+        fetchProfile(xrInputSource, this._profilesRootPath).then(({profile, assetPath}) => {
+          const motionController = new MotionController(
+            xrInputSource,
+            profile,
+            assetPath
+          );
+          
+          this._gltfLoader.setPath('');
+          controllerModel.initialize(motionController, this._gltfLoader);
+        }).catch((err) => {
+          console.warn(err);
+        });
+      }
     });
 
     controller.addEventListener('disconnected', (event) => {

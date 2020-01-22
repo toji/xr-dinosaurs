@@ -62,7 +62,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           </li>
           <li class='disabled' id='viewARButton'>
             Bring a Dinosaur home with Augmented Reality.
-            <p>Coming Soon</p>
           </li>
         </ul>
       </main>
@@ -164,6 +163,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       let selecting = QueryArgs.getBool('selecting', false);
       let viewing = QueryArgs.getString('viewing', '');
+      let arMode = false;
 
       // Initialized the polyfill unless specifically requested not to.
       let usePolyfill = QueryArgs.getBool('polyfill', true);
@@ -195,7 +195,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       let view2DButton = document.getElementById('view2DButton');
       let viewVRButton = document.getElementById('viewVRButton');
-      let viewARButton = null; //document.getElementById('viewARButton');
+      let viewARButton = document.getElementById('viewARButton');
 
       let vrSupported = false;
       let arSupported = false;
@@ -216,7 +216,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           landingPage.classList.add('hidden');
           containerElement.classList.remove('hidden');
           setTimeout(() => {
-            RunDinosaurAppWithModel(containerElement, viewing);
+            RunDinosaurAppWithModel(containerElement, viewing, arMode ? 'immersive-ar' : null);
           }, 100);
         }
 
@@ -260,6 +260,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       viewVRButton.addEventListener('click', startVR);
       showDinosaurVRButton.addEventListener('click', startVR);
+
+      function startAR() {
+        if (!arSupported) return;
+        RunDinosaurApp(containerElement, 'immersive-ar');
+      }
+
+      viewARButton.addEventListener('click', () => {
+        arMode = true;
+        selecting = true;
+        updateAppState();
+      });
+      showDinosaurARButton.addEventListener('click', startAR);
 
       // Wire up each of the dinosaur selection options
       let dinosaurOptions = document.querySelectorAll('#dinosaurList>li');
