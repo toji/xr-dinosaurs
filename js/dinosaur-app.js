@@ -20,6 +20,7 @@
 
 import { HDRSkybox } from './hdr-skybox.js';
 import { BlobShadowManager } from './blob-shadow-manager.js';
+import { PenEnvironment } from './pen-environment.js';
 import { XRButtonManager } from './xr-button.js';
 import { XRDinosaurLoader } from './dinosaurs/xr-dinosaur-loader.js';
 import { XRInputCursorManager } from './xr-input-cursor.js';
@@ -31,9 +32,7 @@ import * as THREE from './third-party/three.js/build/three.module.js';
 import { DRACOLoader } from './third-party/three.js/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from './third-party/three.js/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from './third-party/three.js/examples/jsm/controls/OrbitControls.js';
-import { PenEnvironment } from './pen-environment.js';
-
-import { XRControllerModelLoader } from './xr-controller-model-loader.js';
+import { XRControllerModelFactory } from './third-party/three.js/examples/jsm/webxr/XRControllerModelFactory.js';
 
 // VR Button Layout
 const ROW_LENGTH = 4;
@@ -62,7 +61,7 @@ let controllers = [];
 let skybox, envMap;
 let buttonManager, buttonGroup, targetButtonGroupHeight;
 let xrSession, xrMode;
-let xrControllerModelLoader;
+let xrControllerModelFactory;
 let placementMode = false;
 let hitTestSource;
 
@@ -146,7 +145,7 @@ function initControllers() {
   function buildController(index) {
     let targetRay = renderer.xr.getController(index);
     let grip = renderer.xr.getControllerGrip(index);
-    let model = xrControllerModelLoader.getControllerModel(grip);
+    let model = xrControllerModelFactory.createControllerModel(grip);
 
     targetRay.addEventListener('connected', (event) => {
       const xrInputSource = event.data;
@@ -193,7 +192,7 @@ export function PreloadDinosaurApp(debug = false) {
   blobShadowManager = new BlobShadowManager(textureLoader.load('media/textures/shadow.png'));
   scene.add(blobShadowManager);
 
-  xrControllerModelLoader = new XRControllerModelLoader(gltfLoader/*, 'js/third-party/webxr-input-profiles/packages/assets/dist/profiles'*/);
+  xrControllerModelFactory = new XRControllerModelFactory(gltfLoader);
 
   environment = new PenEnvironment(gltfLoader);
   scene.add(environment);
