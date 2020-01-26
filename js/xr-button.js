@@ -37,6 +37,7 @@ export class XRButtonManager {
     this._buttons = [];
     this._controllers = [];
     this._frame = 0;
+    this.active = true;
   }
 
   createButton(options) {
@@ -53,9 +54,11 @@ export class XRButtonManager {
   }
 
   onSelect(controller) {
-    let hovered = this.getHoveredButtons(controller);
-    if (hovered && hovered.length > 0) {
-      hovered[0].click();
+    if (this.active) {
+      let hovered = this.getHoveredButtons(controller);
+      if (hovered && hovered.length > 0) {
+        hovered[0].click();
+      }
     }
   }
 

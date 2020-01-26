@@ -67,6 +67,19 @@ article.hidden {
   border: 0;
 }
 
+#arScale {
+  margin: 1em;
+  float: right;
+}
+
+#dinosaurSelection #arScale {
+  display: none;
+}
+
+#dinosaurSelection.ar #arScale {
+  display: inline;
+}
+
 #dinosaurSelection {
   position: absolute;
   z-index: 9999;

@@ -92,6 +92,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <article id='dinosaurSelection' class='hidden'>
       <div class='button-bar'>
         <button id='closeSelection' alt='Close Dinosaur Selection'>Close</button>
+        <select id='arScale' alt='The size of the dinosaur in AR'>
+          <option value='1'>1:1 - Full Size</option>
+          <option value='0.25'>1:4 - Quarter Size</option>
+          <option value='0.0625s'>1:16 - Toy Size</option>
+        </select>
       </div>
       <ul id='dinosaurList' class='menu'>
         <li data-dinosaur='ankylosaurus'>
@@ -159,7 +164,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
       import { QueryArgs } from './js/query-args.js';
 
-      import { PreloadDinosaurApp, RunDinosaurApp, RunDinosaurAppWithModel } from './js/dinosaur-app.js';
+      import { PreloadDinosaurApp, RunDinosaurApp, SetStateChangeCallback } from './js/dinosaur-app.js';
 
       const SCREEN = {
         Home: 0,
@@ -200,6 +205,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let viewVRButton = document.getElementById('viewVRButton');
       let viewARButton = document.getElementById('viewARButton');
 
+      let arScaleSelect = document.getElementById('arScale');
+
       let vrSupported = false;
       let arSupported = false;
 
@@ -212,6 +219,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             break;
           case SCREEN.Select:
             selectionElement.classList.remove('hidden');
+
+            if (appState.viewMode == VIEW_MODE.AR) {
+              selectionElement.classList.add('ar');
+            } else {
+              selectionElement.classList.remove('ar');
+            }
+            
             break;
           case SCREEN.View:
             landingPage.classList.add('hidden');
@@ -226,11 +240,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 immersiveMode = 'immersive-ar';
               }
 
-              if (appState.dinosaur) {
-                RunDinosaurAppWithModel(containerElement, appState.dinosaur, immersiveMode);
-              } else {
-                RunDinosaurApp(containerElement, immersiveMode);
-              }
+              RunDinosaurApp(containerElement, {
+                xrSessionMode: immersiveMode,
+                dinosaur: appState.dinosaur,
+                arScale: parseFloat(arScaleSelect.value)
+              });
             }, 100);
 
             break;
@@ -238,8 +252,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         if (pushState) {
           history.pushState(appState, null, null);
+        } else {
+          history.replaceState(appState, null, null);
         }
       }
+
+      SetStateChangeCallback((state) => {
+        if (state.dinosaur) {
+          appState.dinosaur = state.dinosaur;
+          updateAppState(false);
+        }
+
+        if (state.xrSessionEnded && appState.viewMode == VIEW_MODE.AR) {
+          appState.screen = SCREEN.Select;
+          updateAppState(false);
+        }
+      });
 
       window.addEventListener("popstate", function(e) {
         appState = e.state;
@@ -274,7 +302,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       function startAR() {
         if (!arSupported) return;
-        RunDinosaurApp(containerElement, 'immersive-ar');
+        appState.screen = SCREEN.View;
+        appState.viewMode = VIEW_MODE.AR;
+        updateAppState();
       }
 
       viewARButton.addEventListener('click', () => {
@@ -312,6 +342,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         }
 
         if (viewARButton) {
+          if (appState.debug) {
+            viewARButton.classList.remove('disabled');
+            showDinosaurARButton.classList.remove('hidden');
+          }
           navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
             arSupported = supported;
             if (supported) {

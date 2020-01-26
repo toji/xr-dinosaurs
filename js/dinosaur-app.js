@@ -63,7 +63,9 @@ let buttonManager, buttonGroup, targetButtonGroupHeight;
 let xrSession, xrMode;
 let xrControllerModelFactory;
 let placementMode = false;
+let dinosaurScale = 1;
 let hitTestSource;
+let stateCallback = null;
 
 let textureLoader = new THREE.TextureLoader();
 let audioLoader = new THREE.AudioLoader();
@@ -171,6 +173,16 @@ function initControllers() {
   }
 
   controllers.push(buildController(0), buildController(1));
+}
+
+export function SetStateChangeCallback(callback) {
+  stateCallback = callback;
+}
+
+function OnAppStateChange(state) {
+  if (stateCallback) {
+    stateCallback(state);
+  }
 }
 
 export function PreloadDinosaurApp(debug = false) {
@@ -297,6 +309,8 @@ export function PreloadDinosaurApp(debug = false) {
     }
     environment.visible = debugSettings.drawEnvironment;
     buttonGroup.visible = debugSettings.drawButtons;
+
+    OnAppStateChange({ xrSessionEnded: true });
   });
 
   skybox = new HDRSkybox(renderer, 'media/textures/equirectangular/', 'misty_pines_2k.hdr');
@@ -314,7 +328,7 @@ export function PreloadDinosaurApp(debug = false) {
   return preloadPromise;
 }
 
-export function RunDinosaurApp(container, xrSessionMode = null) {
+export function RunDinosaurApp(container, options = {}) {
   if (!appRunning) {
     // Hide the landing page.
     let landingPage = document.getElementById('landingPage');
@@ -348,8 +362,17 @@ export function RunDinosaurApp(container, xrSessionMode = null) {
 
   // If the app was requested to start up immediately into a given XR session
   // mode, do so now.
-  if (xrSessionMode) {
-    startXRSession(xrSessionMode);
+  dinosaurScale = 1;
+
+  if (options.xrSessionMode) {
+    if (options.xrSessionMode === 'immersive-ar' && options.arScale) {
+      dinosaurScale = options.arScale;
+    }
+    startXRSession(options.xrSessionMode);
+  }
+
+  if (options.dinosaur) {
+    loadModel(options.dinosaur);
   }
 }
 
@@ -373,6 +396,7 @@ function startXRSession(mode) {
 
         if ('requestHitTestSource' in xrSession) {
           placementMode = true;
+          buttonManager.active = false;
 
           xrSession.addEventListener('select', () => {
             placementMode = false;
@@ -381,19 +405,11 @@ function startXRSession(mode) {
           let viewerSpace = await xrSession.requestReferenceSpace('viewer');
           hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
         }
+      } else {
+        buttonManager.active = true;
       }
     });
   }
-}
-
-export function RunDinosaurAppWithModel(container, model, xrSessionMode = null) {
-  // Ensure the app content has been loaded (will early terminate if already
-  // called).
-  PreloadDinosaurApp();
-
-  loadModel(model).then(() => {
-    RunDinosaurApp(container, xrSessionMode);
-  });
 }
 
 function buildButtons() {
@@ -496,13 +512,16 @@ function loadModel(key) {
     xrDinosaur = dinosaur;
     xrDinosaur.visible = debugSettings.drawDinosaur;
     xrDinosaur.envMap = envMap;
+    xrDinosaur.scale.setScalar(dinosaurScale, dinosaurScale, dinosaurScale);
     scene.add(xrDinosaur);
 
     controls.target.copy(xrDinosaur.center);
     controls.update();
 
     blobShadowManager.shadowNodes = xrDinosaur.shadowNodes;
-    blobShadowManager.shadowSize = xrDinosaur.shadowSize;
+    blobShadowManager.shadowSize = xrDinosaur.shadowSize * dinosaurScale;
+
+    OnAppStateChange({ dinosaur: key });
   }).catch((err) => {
     // This will usually happen if a new dino is selected before the
     // previous one finishes loading. Not a cause for concern.
@@ -544,8 +563,10 @@ function render(time, xrFrame) {
     if (hitTestResults.length > 0) {
       let pose = hitTestResults[0].getPose(renderer.xr.getReferenceSpace());
 
-      xrDinosaur.position.copy(pose.transform.position);
-      blobShadowManager.position.y = pose.transform.position.y;
+      if (xrDinosaur) {
+        xrDinosaur.position.copy(pose.transform.position);
+        blobShadowManager.position.y = pose.transform.position.y;
+      }
     }
   }
 
