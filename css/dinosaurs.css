@@ -17,6 +17,10 @@ body {
   color: #DEDEDE;
 }
 
+body.ar {
+  background-color: transparent;
+}
+
 a {
   color: #9999DE;
   text-decoration: none;
@@ -188,8 +192,11 @@ li[data-dinosaur="trex"]:before {
   cursor: pointer;
 }
 
-
 #canvasContainer .button-bar>button.hidden {
+  display: none;
+}
+
+.ar #canvasContainer canvas {
   display: none;
 }
 
@@ -205,6 +212,22 @@ li[data-dinosaur="trex"]:before {
 #showDinosaurAR {
   float: right;
   background-image: url('../media/textures/ar-icon.svg');
+}
+
+body.ar #showDinosaurVR {
+  display: none;
+}
+
+body.ar #showDinosaurAR {
+  background-image: url('../media/textures/ar-icon-error.svg');
+}
+
+body.vr #showDinosaurVR {
+  background-image: url('../media/textures/vr-icon-error.svg');
+}
+
+body.vr #showDinosaurAR {
+  display: none
 }
 
 /*

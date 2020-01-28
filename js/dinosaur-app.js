@@ -348,12 +348,6 @@ export function PreloadDinosaurApp(debug = false) {
 
 export function RunDinosaurApp(container, options = {}) {
   if (!appRunning) {
-    // Hide the landing page.
-    let landingPage = document.getElementById('landingPage');
-    landingPage.classList.add('hidden');
-
-    container.classList.remove('hidden');
-
     // Ensure the app content has been loaded (will early terminate if already
     // called).
     PreloadDinosaurApp();
@@ -375,9 +369,6 @@ export function RunDinosaurApp(container, options = {}) {
     appRunning = true;
   }
 
-  let selectionElement = document.getElementById('dinosaurSelection');
-  selectionElement.classList.add('hidden');
-
   // If the app was requested to start up immediately into a given XR session
   // mode, do so now.
   dinosaurScale = 1;
@@ -386,7 +377,7 @@ export function RunDinosaurApp(container, options = {}) {
     if (options.xrSessionMode === 'immersive-ar' && options.arScale) {
       dinosaurScale = options.arScale;
     }
-    startXRSession(options.xrSessionMode);
+    StartXRSession(options.xrSessionMode);
   }
 
   if (options.dinosaur) {
@@ -394,47 +385,61 @@ export function RunDinosaurApp(container, options = {}) {
   }
 }
 
-function startXRSession(mode) {
+export function EndXRSession() {
   if (xrSession) {
     xrSession.end();
-  } else {
-    navigator.xr.requestSession(mode, {
-      requiredFeatures: ['local-floor']
-    }).then(async (session) => {
-      xrSession = session;
-      xrMode = mode;
-      renderer.xr.setReferenceSpaceType('local-floor');
-      renderer.xr.setSession(session);
-
-      if (xrMode == 'immersive-ar') {
-        // Stop rendering the environment in AR mode
-        scene.background = null;
-        environment.visible = false;
-        buttonGroup.visible = false;
-
-        if ('requestHitTestSource' in xrSession) {
-          placementMode = true;
-          buttonManager.active = false;
-
-          xrSession.addEventListener('select', () => {
-            placementMode = false;
-          });
-
-          // Lighting estimation experiement
-          if ('updateWorldTrackingState' in xrSession) {
-            xrSession.updateWorldTrackingState({
-              lightEstimationState: { enabled: true }
-            });
-          }
-
-          let viewerSpace = await xrSession.requestReferenceSpace('viewer');
-          hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
-        }
-      } else {
-        buttonManager.active = true;
-      }
-    });
   }
+}
+
+function StartXRSession(mode) {
+  if (xrSession && xrMode == mode) {
+    return;
+  }
+
+  let sessionOptions = {
+    requiredFeatures: ['local-floor']
+  };
+  /*if (mode === 'immersive-ar') {
+    sessionOptions.optionalFeatures = ['dom-overlay'],
+    sessionOptions.domOverlay = { root: document.body };
+  }*/
+
+  navigator.xr.requestSession(mode, sessionOptions).then(async (session) => {
+    xrSession = session;
+    xrMode = mode;
+    renderer.xr.setReferenceSpaceType('local-floor');
+    renderer.xr.setSession(session);
+
+    if (xrMode == 'immersive-ar') {
+      // Stop rendering the environment in AR mode
+      scene.background = null;
+      environment.visible = false;
+      buttonGroup.visible = false;
+
+      // Lighting estimation experiement
+      if ('updateWorldTrackingState' in xrSession) {
+        xrSession.updateWorldTrackingState({
+          lightEstimationState: { enabled: true }
+        });
+      }
+
+      if ('requestHitTestSource' in xrSession) {
+        placementMode = true;
+        buttonManager.active = false;
+
+        xrSession.addEventListener('select', () => {
+          placementMode = false;
+        });
+
+        let viewerSpace = await xrSession.requestReferenceSpace('viewer');
+        hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+      }
+    } else {
+      buttonManager.active = true;
+    }
+
+    OnAppStateChange({ xrSessionStarted: true });
+  });
 }
 
 function buildButtons() {
@@ -646,7 +651,7 @@ function render(time, xrFrame) {
     environment.update(delta);
 
     // Update the button height to always stay within a reasonable range of the user's head
-    if (renderer.xr.isPresenting && buttonGroup) {
+    /*if (renderer.xr.isPresenting && buttonGroup) {
       let worldPosition = new THREE.Vector3();
       viewerProxy.getWorldPosition(worldPosition);
 
@@ -659,7 +664,7 @@ function render(time, xrFrame) {
 
       // Ease into the target position
       buttonGroup.position.y += (targetButtonGroupHeight - buttonGroup.position.y) * 0.05;
-    }
+    }*/
 
     buttonManager.update(delta);
   }

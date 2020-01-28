@@ -164,7 +164,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
       import { QueryArgs } from './js/query-args.js';
 
-      import { PreloadDinosaurApp, RunDinosaurApp, SetStateChangeCallback } from './js/dinosaur-app.js';
+      import { PreloadDinosaurApp, RunDinosaurApp, SetStateChangeCallback, EndXRSession } from './js/dinosaur-app.js';
 
       const SCREEN = {
         Home: 0,
@@ -182,7 +182,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         screen: SCREEN.Home,
         viewMode: VIEW_MODE.Flat,
         dinosaur: null,
-        debug: QueryArgs.getBool('debug')
+        debug: QueryArgs.getBool('debug'),
+        inXR: false
       };
 
       // Initialized the polyfill unless specifically requested not to.
@@ -252,20 +253,33 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         if (pushState) {
           history.pushState(appState, null, null);
-        } else {
-          history.replaceState(appState, null, null);
         }
       }
 
       SetStateChangeCallback((state) => {
         if (state.dinosaur) {
           appState.dinosaur = state.dinosaur;
-          updateAppState(false);
+          history.replaceState(appState, null, null);
         }
 
-        if (state.xrSessionEnded && appState.viewMode == VIEW_MODE.AR) {
-          appState.screen = SCREEN.Select;
+        if (state.xrSessionStarted) {
+          appState.inXR = true;
+          document.body.classList.add('xr');
+          document.body.classList.add(appState.viewMode == VIEW_MODE.AR ? 'ar' : 'vr');
+        }
+
+        if (state.xrSessionEnded) {
+          appState.inXR = false;
+          document.body.classList.remove('xr');
+          document.body.classList.remove('ar');
+          document.body.classList.remove('vr');
+          if (appState.viewMode == VIEW_MODE.AR) {
+            appState.screen = SCREEN.Select;
+          } else if (appState.viewMode == VIEW_MODE.VR) {
+            appState.viewMode = VIEW_MODE.Flat;
+          }
           updateAppState(false);
+          history.replaceState(appState, null, null);
         }
       });
 
@@ -292,6 +306,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       function startVR() {
         if (!vrSupported) return;
+        if (appState.inXR) {
+          EndXRSession();
+          return;
+        }
         appState.screen = SCREEN.View;
         appState.viewMode = VIEW_MODE.VR;
         updateAppState();
@@ -302,6 +320,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       function startAR() {
         if (!arSupported) return;
+        if (appState.inXR) {
+          EndXRSession();
+          return;
+        }
         appState.screen = SCREEN.View;
         appState.viewMode = VIEW_MODE.AR;
         updateAppState();
