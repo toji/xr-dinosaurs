@@ -65,6 +65,9 @@ let xrControllerModelFactory;
 let placementMode = false;
 let dinosaurScale = 1;
 let hitTestSource;
+let lightProbe;
+let directionalLight;
+let hemisphereLight;
 let stateCallback = null;
 
 let textureLoader = new THREE.TextureLoader();
@@ -242,9 +245,9 @@ export function PreloadDinosaurApp(debug = false) {
   }
   controls.update();
 
-  let light = new THREE.HemisphereLight(0xFFFFFF, 0x448844);
-  light.position.set(1, 1, 1);
-  scene.add(light);
+  hemisphereLight = new THREE.HemisphereLight(0xFFFFFF, 0x448844);
+  hemisphereLight.position.set(1, 1, 1);
+  scene.add(hemisphereLight);
 
   stats = new XRStats(renderer);
   if (!debugEnabled) {
@@ -287,6 +290,21 @@ export function PreloadDinosaurApp(debug = false) {
     hitTestSource = null;
     placementMode = false;
 
+    // Revert back to more VR/2D appropriate lighting.
+    if (lightProbe) {
+      scene.add(hemisphereLight);
+
+      scene.remove(lightProbe);
+      lightProbe = null;
+
+      scene.remove(directionalLight);
+      directionalLight = null;
+
+      if (xrDinosaur) {
+        xrDinosaur.envMap = envMap;
+      }
+    }
+
     // Stop ambient jungle sounds once the user exits VR.
     if (ambientSounds) {
       ambientSounds.stop();
@@ -317,7 +335,7 @@ export function PreloadDinosaurApp(debug = false) {
   preloadPromise = skybox.getEnvMap().then((texture) => {
     envMap = texture;
     scene.background = envMap;
-    if (xrDinosaur) {
+    if (xrDinosaur && !lightProbe) {
       xrDinosaur.envMap = envMap;
     }
     for (let controller of controllers) {
@@ -401,6 +419,13 @@ function startXRSession(mode) {
           xrSession.addEventListener('select', () => {
             placementMode = false;
           });
+
+          // Lighting estimation experiement
+          if ('updateWorldTrackingState' in xrSession) {
+            xrSession.updateWorldTrackingState({
+              lightEstimationState: { enabled: true }
+            });
+          }
 
           let viewerSpace = await xrSession.requestReferenceSpace('viewer');
           hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
@@ -511,8 +536,12 @@ function loadModel(key) {
 
     xrDinosaur = dinosaur;
     xrDinosaur.visible = debugSettings.drawDinosaur;
-    xrDinosaur.envMap = envMap;
     xrDinosaur.scale.setScalar(dinosaurScale, dinosaurScale, dinosaurScale);
+
+    if (!lightProbe) {
+      xrDinosaur.envMap = envMap;
+    }
+
     scene.add(xrDinosaur);
 
     controls.target.copy(xrDinosaur.center);
@@ -549,14 +578,10 @@ function onWindowResize() {
   renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
+//let frameId = 0;
+
 function render(time, xrFrame) {
   let delta = clock.getDelta();
-  if(xrDinosaur && debugSettings.animate) {
-    if (!placementMode) {
-      xrDinosaur.update(delta);
-    }
-    blobShadowManager.update();
-  }
 
   if (placementMode && hitTestSource) {
     let hitTestResults = xrFrame.getHitTestResults(hitTestSource);
@@ -570,7 +595,54 @@ function render(time, xrFrame) {
     }
   }
 
-  if (xrMode != 'immersive-ar') {
+  if(xrDinosaur && debugSettings.animate) {
+    if (!placementMode) {
+      xrDinosaur.update(delta);
+    }
+    blobShadowManager.update();
+  }
+
+  if (xrMode == 'immersive-ar') {
+    if (xrFrame.worldInformation && xrFrame.worldInformation.lightEstimation) {
+      let xrLightProbe = xrFrame.worldInformation.lightEstimation.lightProbe;
+      if (xrLightProbe) {
+        if (!lightProbe) {
+          lightProbe = new THREE.LightProbe();
+          scene.add(lightProbe);
+
+          directionalLight = new THREE.DirectionalLight();
+          scene.add(directionalLight);
+
+          scene.remove(hemisphereLight);
+          if (xrDinosaur) {
+            xrDinosaur.envMap = null;
+          }
+        }
+        
+        lightProbe.sh.fromArray(xrLightProbe.sphericalHarmonics.coefficients);
+
+        directionalLight.position.set(xrLightProbe.mainLightDirection.x,
+                                      xrLightProbe.mainLightDirection.y,
+                                      xrLightProbe.mainLightDirection.z);
+
+        let intensityScalar = Math.max(1.0,
+                              Math.max(xrLightProbe.mainLightIntensity.x,
+                              Math.max(xrLightProbe.mainLightIntensity.y,
+                                       xrLightProbe.mainLightIntensity.z)));
+
+        directionalLight.color.set(xrLightProbe.mainLightIntensity.x / intensityScalar,
+                                   xrLightProbe.mainLightIntensity.y / intensityScalar,
+                                   xrLightProbe.mainLightIntensity.z / intensityScalar);
+        directionalLight.intensity = intensityScalar;
+                                  
+        /*frameId++;
+        if (frameId % 90 == 0) {
+          console.log(`Light Direction: ${xrLightProbe.mainLightDirection.x}, ${xrLightProbe.mainLightDirection.y}, ${xrLightProbe.mainLightDirection.z}`);
+          console.log(`Light Intensity: ${xrLightProbe.mainLightIntensity.x}, ${xrLightProbe.mainLightIntensity.y}, ${xrLightProbe.mainLightIntensity.z}`)
+        }*/
+      }
+    }
+  } else {
     environment.update(delta);
 
     // Update the button height to always stay within a reasonable range of the user's head
