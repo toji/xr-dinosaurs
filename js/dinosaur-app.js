@@ -18,13 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import { HDRSkybox } from './hdr-skybox.js';
 import { BlobShadowManager } from './blob-shadow-manager.js';
 import { PenEnvironment } from './pen-environment.js';
 import { XRButtonManager } from './xr-button.js';
 import { XRDinosaurLoader } from './dinosaurs/xr-dinosaur-loader.js';
 import { XRInputCursorManager } from './xr-input-cursor.js';
 import { XRInputRay } from './xr-input-ray.js';
+import { XRLighting } from './xr-lighting.js';
 import { XRStats } from './xr-stats.js';
 
 // Third Party Imports
@@ -58,16 +58,13 @@ let blobShadowManager;
 let cursorManager;
 let environment;
 let controllers = [];
-let skybox, envMap;
 let buttonManager, buttonGroup, targetButtonGroupHeight;
 let xrSession, xrMode;
 let xrControllerModelFactory;
 let placementMode = false;
 let dinosaurScale = 1;
 let hitTestSource;
-let lightProbe;
-let directionalLight;
-let hemisphereLight;
+let xrLighting;
 let stateCallback = null;
 
 let textureLoader = new THREE.TextureLoader();
@@ -116,7 +113,7 @@ function initDebugUI() {
   let guiRenderingFolder = gui.addFolder('Rendering Options');
   guiRenderingFolder.add(debugSettings, 'drawSkybox').onFinishChange(() => {
     if (debugSettings.drawSkybox) {
-      scene.background = envMap;
+      scene.background = xrLighting.envMap;
     } else {
       scene.background = null;
     }
@@ -164,9 +161,7 @@ function initControllers() {
     environment.platform.add(targetRay);
     environment.platform.add(grip);
 
-    if (envMap) {
-      model.setEnvironmentMap(envMap);
-    }
+    model.setEnvironmentMap(xrLighting.envMap);
 
     return {
       targetRay,
@@ -228,12 +223,23 @@ export function PreloadDinosaurApp(debug = false) {
   viewerProxy = new THREE.Object3D();
   camera.add(viewerProxy);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  // Try to create a WebGL 2 context if we can, otherwise fall back to WebGL.
+  let canvas = document.createElement('canvas');
+  let gl = null;
+  for (let contextType of ['webgl2', 'webgl', 'experimental-webgl']) {
+    gl = canvas.getContext(contextType, { antialias: true, xrCompatible: true });
+    if (gl) break;
+  }
+
+  renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputEncoding = THREE.sRGBEncoding;
   //renderer.physicallyCorrectLights = true;
   renderer.xr.enabled = true;
+
+  xrLighting = new XRLighting(renderer);
+  scene.add(xrLighting);
 
   window.addEventListener('resize', onWindowResize, false);
 
@@ -244,10 +250,6 @@ export function PreloadDinosaurApp(debug = false) {
     controls.maxPolarAngle = Math.PI * 0.49;
   }
   controls.update();
-
-  hemisphereLight = new THREE.HemisphereLight(0xFFFFFF, 0x448844);
-  hemisphereLight.position.set(1, 1, 1);
-  scene.add(hemisphereLight);
 
   stats = new XRStats(renderer);
   if (!debugEnabled) {
@@ -290,20 +292,7 @@ export function PreloadDinosaurApp(debug = false) {
     hitTestSource = null;
     placementMode = false;
 
-    // Revert back to more VR/2D appropriate lighting.
-    if (lightProbe) {
-      scene.add(hemisphereLight);
-
-      scene.remove(lightProbe);
-      lightProbe = null;
-
-      scene.remove(directionalLight);
-      directionalLight = null;
-
-      if (xrDinosaur) {
-        xrDinosaur.envMap = envMap;
-      }
-    }
+    xrLighting.xrSession = null;
 
     // Stop ambient jungle sounds once the user exits VR.
     if (ambientSounds) {
@@ -319,30 +308,30 @@ export function PreloadDinosaurApp(debug = false) {
       stats.drawOrthographic = true;
     }
 
-    // When exiting AR mode we need to re-enable the environment rendering
-    if (debugSettings.drawSkybox) {
-      scene.background = envMap;
-    } else {
-      scene.background = null;
-    }
     environment.visible = debugSettings.drawEnvironment;
     buttonGroup.visible = debugSettings.drawButtons;
 
     OnAppStateChange({ xrSessionEnded: true });
   });
 
-  skybox = new HDRSkybox(renderer, 'media/textures/equirectangular/', 'misty_pines_2k.hdr');
-  preloadPromise = skybox.getEnvMap().then((texture) => {
-    envMap = texture;
-    scene.background = envMap;
-    if (xrDinosaur && !lightProbe) {
-      xrDinosaur.envMap = envMap;
+  xrLighting.addEventListener('envmapchange', () => {
+    // When exiting AR mode we need to re-enable the environment rendering
+    if (xrMode != 'immersive-ar' && debugSettings.drawSkybox) {
+      scene.background = xrLighting.envMap;
+    } else {
+      scene.background = null;
     }
+
+    if (xrDinosaur) {
+      xrDinosaur.envMap = xrLighting.envMap;
+    }
+
     for (let controller of controllers) {
-      controller.model.setEnvironmentMap(envMap);
+      controller.model.setEnvironmentMap(xrLighting.envMap);
     }
   });
 
+  preloadPromise = xrLighting.loadHDRSkybox('media/textures/equirectangular/misty_pines_2k.hdr');
   return preloadPromise;
 }
 
@@ -417,11 +406,7 @@ function StartXRSession(mode) {
       buttonGroup.visible = false;
 
       // Lighting estimation experiement
-      if ('updateWorldTrackingState' in xrSession) {
-        xrSession.updateWorldTrackingState({
-          lightEstimationState: { enabled: true }
-        });
-      }
+      xrLighting.xrSession = xrSession;
 
       if ('requestHitTestSource' in xrSession) {
         placementMode = true;
@@ -540,12 +525,9 @@ function loadModel(key) {
     }
 
     xrDinosaur = dinosaur;
+    xrDinosaur.envMap = xrLighting.envMap;
     xrDinosaur.visible = debugSettings.drawDinosaur;
     xrDinosaur.scale.setScalar(dinosaurScale, dinosaurScale, dinosaurScale);
-
-    if (!lightProbe) {
-      xrDinosaur.envMap = envMap;
-    }
 
     scene.add(xrDinosaur);
 
@@ -607,47 +589,7 @@ function render(time, xrFrame) {
     blobShadowManager.update();
   }
 
-  if (xrMode == 'immersive-ar') {
-    if (xrFrame.worldInformation && xrFrame.worldInformation.lightEstimation) {
-      let xrLightProbe = xrFrame.worldInformation.lightEstimation.lightProbe;
-      if (xrLightProbe) {
-        if (!lightProbe) {
-          lightProbe = new THREE.LightProbe();
-          scene.add(lightProbe);
-
-          directionalLight = new THREE.DirectionalLight();
-          scene.add(directionalLight);
-
-          scene.remove(hemisphereLight);
-          if (xrDinosaur) {
-            xrDinosaur.envMap = null;
-          }
-        }
-        
-        lightProbe.sh.fromArray(xrLightProbe.sphericalHarmonics.coefficients);
-
-        directionalLight.position.set(xrLightProbe.mainLightDirection.x,
-                                      xrLightProbe.mainLightDirection.y,
-                                      xrLightProbe.mainLightDirection.z);
-
-        let intensityScalar = Math.max(1.0,
-                              Math.max(xrLightProbe.mainLightIntensity.x,
-                              Math.max(xrLightProbe.mainLightIntensity.y,
-                                       xrLightProbe.mainLightIntensity.z)));
-
-        directionalLight.color.set(xrLightProbe.mainLightIntensity.x / intensityScalar,
-                                   xrLightProbe.mainLightIntensity.y / intensityScalar,
-                                   xrLightProbe.mainLightIntensity.z / intensityScalar);
-        directionalLight.intensity = intensityScalar;
-                                  
-        /*frameId++;
-        if (frameId % 90 == 0) {
-          console.log(`Light Direction: ${xrLightProbe.mainLightDirection.x}, ${xrLightProbe.mainLightDirection.y}, ${xrLightProbe.mainLightDirection.z}`);
-          console.log(`Light Intensity: ${xrLightProbe.mainLightIntensity.x}, ${xrLightProbe.mainLightIntensity.y}, ${xrLightProbe.mainLightIntensity.z}`)
-        }*/
-      }
-    }
-  } else {
+  if (xrMode != 'immersive-ar') {
     environment.update(delta);
 
     // Update the button height to always stay within a reasonable range of the user's head
