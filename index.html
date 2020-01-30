@@ -215,6 +215,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let arSupported = false;
 
       function updateAppState(pushState = true) {
+        if (pushState) {
+          history.pushState(appState, null, null);
+        }
+
         switch (appState.screen) {
           case SCREEN.Home:
             landingPage.classList.remove('hidden');
@@ -256,10 +260,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             }
 
             break;
-        }
-
-        if (pushState) {
-          history.pushState(appState, null, null);
         }
       }
 
