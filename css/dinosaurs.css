@@ -219,11 +219,11 @@ body.ar #showDinosaurVR {
 }
 
 body.ar #showDinosaurAR {
-  background-image: url('../media/textures/ar-icon-error.svg');
+  background-image: url('../media/textures/ar-exit-icon.svg');
 }
 
 body.vr #showDinosaurVR {
-  background-image: url('../media/textures/vr-icon-error.svg');
+  background-image: url('../media/textures/vr-exit-icon.svg');
 }
 
 body.vr #showDinosaurAR {
@@ -348,7 +348,7 @@ ul.menu>li:not(:last-child) {
 ul.menu>li:before {
   margin-right: 0.5em;
   width: 3em;
-} 
+}
 
 ul.menu>li.disabled {
   color: rgb(90,90,90);
@@ -447,7 +447,7 @@ canvas {
   z-index: 10000;
   top: 10px;
   left: 10px;
-  
+
 }
 .screenshot {
   float: left;
