@@ -229,14 +229,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             } else {
               selectionElement.classList.remove('ar');
             }
-            
+
             break;
           case SCREEN.View:
             landingPage.classList.add('hidden');
             selectionElement.classList.add('hidden');
             containerElement.classList.remove('hidden');
 
-            setTimeout(() => {
+            if (appState.viewMode == VIEW_MODE.Flat) {
+              setTimeout(() => {
+                RunDinosaurApp(containerElement, { dinosaur: appState.dinosaur });
+              }, 100);
+            } else {
               let immersiveMode = null;
               if (appState.viewMode == VIEW_MODE.VR) {
                 immersiveMode = 'immersive-vr';
@@ -249,7 +253,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 dinosaur: appState.dinosaur,
                 arScale: parseFloat(arScaleSelect.value)
               });
-            }, 100);
+            }
 
             break;
         }
