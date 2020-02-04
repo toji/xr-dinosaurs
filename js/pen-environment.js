@@ -61,7 +61,7 @@ export class PenEnvironment extends THREE.Group {
         if (raisedPlatform) {
           let raisedPlatformTransform = raisedPlatform.parent.matrixWorld;
           raisedPlatform.parent.remove(raisedPlatform);
-          raisedPlatform.applyMatrix(raisedPlatformTransform);
+          raisedPlatform.applyMatrix4(raisedPlatformTransform);
           this._platform.add(raisedPlatform);
         }
         
