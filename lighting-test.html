@@ -1,0 +1,160 @@
+<!doctype html>
+<!--
+Copyright 2019 Brandon Jones
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
+    <meta name='mobile-web-app-capable' content='yes'>
+    <meta name='apple-mobile-web-app-capable' content='yes'>
+
+    <title>AR Lighting Test</title>
+
+    <style>
+      html, body {
+        margin: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <script type="module">
+      import * as THREE from './js/third-party/three.js/build/three.module.js';
+      import { ARButton } from './js/third-party/three.js/examples/jsm/webxr/ARButton.js';
+      import { XRLighting } from './js/xr-lighting.js';
+      
+      let container;
+      let camera, scene, renderer;
+      let controller;
+      let xrLighting;
+      let ballGroup;
+      let selecting = false;
+
+      const SPHERE_DISTANCE = 1.6;
+
+      function init() {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+        //
+
+        // Try to create a WebGL 2 context if we can, otherwise fall back to WebGL.
+        let canvas = document.createElement('canvas');
+        let gl = null;
+        for (let contextType of ['webgl2', 'webgl', 'experimental-webgl']) {
+          gl = canvas.getContext(contextType, { antialias: true, xrCompatible: true });
+          if (gl) break;
+        }
+
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl });
+        //renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        //
+
+        document.body.appendChild(ARButton.createButton(renderer));
+
+        //
+
+        let geometry = new THREE.SphereBufferGeometry(0.175, 32, 32);
+
+        let roughMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0, metalness: 0.0 });
+        let midMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.5 });
+        let metalMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.0, metalness: 1.0 });
+
+        ballGroup = new THREE.Group();
+        ballGroup.add(new THREE.Mesh(geometry, roughMaterial));
+        ballGroup.add(new THREE.Mesh(geometry, midMaterial));
+        ballGroup.add(new THREE.Mesh(geometry, metalMaterial));
+
+        ballGroup.children[0].position.x = -0.4;
+        ballGroup.children[2].position.x = 0.4;
+
+        ballGroup.position.z = -SPHERE_DISTANCE;
+
+        scene.add(ballGroup);
+
+        xrLighting = new XRLighting(renderer);
+        scene.add(xrLighting);
+
+        xrLighting.addEventListener('envmapchange', () => {
+          for (let ball of ballGroup.children) {
+            ball.material.envMap = xrLighting.envMap;
+            ball.material.needsUpdate = true;
+          }
+        });
+
+        renderer.xr.addEventListener('sessionstart', (session) => {
+          xrLighting.xrSession = renderer.xr.getSession();
+        });
+
+        renderer.xr.addEventListener('sessionend', () => {
+          xrLighting.xrSession = null;
+        });
+
+        /*function onSelectStart() {
+          selecting = true;
+          var material = new THREE.MeshPhongMaterial( { color: 0xffffff * Math.random() } );
+          var mesh = new THREE.Mesh( geometry, material );
+          mesh.position.set( 0, 0, - 0.3 ).applyMatrix4( controller.matrixWorld );
+          mesh.quaternion.setFromRotationMatrix( controller.matrixWorld );
+          scene.add( mesh );
+        }*/
+
+        controller = renderer.xr.getController(0);
+        controller.addEventListener('selectstart', () => { selecting = true; });
+        controller.addEventListener('selectend', () => { selecting = false; });
+        scene.add(controller);
+
+        //
+
+        window.addEventListener('resize', onWindowResize, false);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      //
+
+      function render() {
+        if (selecting) {
+          ballGroup.position.set(0, 0, -SPHERE_DISTANCE).applyMatrix4(controller.matrixWorld);
+          ballGroup.quaternion.setFromRotationMatrix(controller.matrixWorld);
+        }
+        renderer.render(scene, camera);
+      }
+
+      init();
+      renderer.setAnimationLoop(render);
+      
+    </script>
+  </body>
+</html>
