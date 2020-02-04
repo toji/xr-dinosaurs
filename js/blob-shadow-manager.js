@@ -121,8 +121,7 @@ export class BlobShadowManager extends THREE.Mesh {
     return this._shadowSize;
   }
 
-  update() {
-    if (!this.visible) { return; }
+  onBeforeRender() {
     for (let i = 0; i < this._shadowNodes.length; ++i) {
       this._shadowNodes[i].getWorldPosition(worldPosition);
 

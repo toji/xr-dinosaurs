@@ -256,7 +256,7 @@ export function PreloadDinosaurApp(debug = false) {
     stats.drawOrthographic = false;
   }
 
-  renderer.xr.addEventListener('sessionstart', () => {
+  renderer.xr.addEventListener('sessionstart', async () => {
     initControllers();
 
     if (!debugEnabled) {
@@ -272,18 +272,48 @@ export function PreloadDinosaurApp(debug = false) {
       controllers[0].grip.add(stats);
     }
 
-    // Load and play ambient jungle sounds once the user enters VR.
-    if (!ambientSounds) {
-      ambientSounds = new THREE.Audio(listener);
-      audioLoader.load('media/sounds/jungle-ambient.mp3', (buffer) => {
-        ambientSounds.setBuffer(buffer);
-        ambientSounds.setLoop(true);
-        ambientSounds.setVolume(0.5);
-        ambientSounds.play();
-      });
+    if (xrMode == 'immersive-ar') {
+      // Stop rendering the environment in AR mode
+      scene.background = null;
+      environment.visible = false;
+      buttonGroup.visible = false;
+
+      // Lighting estimation experiement
+      xrLighting.xrSession = xrSession;
+
+      if ('requestHitTestSource' in xrSession) {
+        placementMode = true;
+        buttonManager.active = false;
+
+        xrSession.addEventListener('select', () => {
+          if (xrDinosaur) {
+            placementMode = false;
+            xrDinosaur.visible = true;
+            blobShadowManager.visible = true;
+          }
+        });
+
+        let viewerSpace = await xrSession.requestReferenceSpace('viewer');
+        hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+      }
     } else {
-      ambientSounds.play();
+      buttonManager.active = true;
+
+      // Load and play ambient jungle sounds once the user enters VR.
+      if (!ambientSounds) {
+        ambientSounds = new THREE.Audio(listener);
+        audioLoader.load('media/sounds/jungle-ambient.mp3', (buffer) => {
+          ambientSounds.setBuffer(buffer);
+          ambientSounds.setLoop(true);
+          ambientSounds.setVolume(0.5);
+          ambientSounds.play();
+        });
+      } else {
+        ambientSounds.play();
+      }
     }
+
+    OnAppStateChange({ xrSessionStarted: true });
   });
 
   renderer.xr.addEventListener('sessionend', () => {
@@ -293,6 +323,9 @@ export function PreloadDinosaurApp(debug = false) {
     placementMode = false;
 
     xrLighting.xrSession = null;
+
+    xrDinosaur.visible = true;
+    blobShadowManager.visible = true;
 
     // Stop ambient jungle sounds once the user exits VR.
     if (ambientSounds) {
@@ -385,45 +418,22 @@ function StartXRSession(mode) {
     return;
   }
 
+  let referenceSpace = mode == 'immersive-ar' ? 'local' : 'local-floor';
+
   let sessionOptions = {
-    requiredFeatures: ['local-floor']
+    requiredFeatures: [referenceSpace]
   };
-  /*if (mode === 'immersive-ar') {
-    sessionOptions.optionalFeatures = ['dom-overlay'],
-    sessionOptions.domOverlay = { root: document.body };
-  }*/
+  if (mode === 'immersive-ar') {
+    sessionOptions.requiredFeatures.push('hit-test');
+    /*sessionOptions.optionalFeatures = ['dom-overlay'],
+    sessionOptions.domOverlay = { root: document.body };*/
+  }
 
   navigator.xr.requestSession(mode, sessionOptions).then(async (session) => {
     xrSession = session;
     xrMode = mode;
-    renderer.xr.setReferenceSpaceType('local-floor');
+    renderer.xr.setReferenceSpaceType(referenceSpace);
     renderer.xr.setSession(session);
-
-    if (xrMode == 'immersive-ar') {
-      // Stop rendering the environment in AR mode
-      scene.background = null;
-      environment.visible = false;
-      buttonGroup.visible = false;
-
-      // Lighting estimation experiement
-      xrLighting.xrSession = xrSession;
-
-      if ('requestHitTestSource' in xrSession) {
-        placementMode = true;
-        buttonManager.active = false;
-
-        xrSession.addEventListener('select', () => {
-          placementMode = false;
-        });
-
-        let viewerSpace = await xrSession.requestReferenceSpace('viewer');
-        hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
-      }
-    } else {
-      buttonManager.active = true;
-    }
-
-    OnAppStateChange({ xrSessionStarted: true });
   });
 }
 
@@ -570,23 +580,26 @@ function onWindowResize() {
 function render(time, xrFrame) {
   let delta = clock.getDelta();
 
-  if (placementMode && hitTestSource) {
-    let hitTestResults = xrFrame.getHitTestResults(hitTestSource);
-    if (hitTestResults.length > 0) {
-      let pose = hitTestResults[0].getPose(renderer.xr.getReferenceSpace());
-
-      if (xrDinosaur) {
+  if (xrDinosaur) {
+    if (placementMode && hitTestSource) {
+      let pose = null;
+      let hitTestResults = xrFrame.getHitTestResults(hitTestSource);
+      if (hitTestResults.length > 0) {
+        pose = hitTestResults[0].getPose(renderer.xr.getReferenceSpace());
+      }
+  
+      if (pose) {
+        xrDinosaur.visible = true;
+        blobShadowManager.visible = true;
         xrDinosaur.position.copy(pose.transform.position);
         blobShadowManager.position.y = pose.transform.position.y;
+      } else {
+        xrDinosaur.visible = false;
+        blobShadowManager.visible = false;
       }
-    }
-  }
-
-  if(xrDinosaur && debugSettings.animate) {
-    if (!placementMode) {
+    } else if(debugSettings.animate) {
       xrDinosaur.update(delta);
     }
-    blobShadowManager.update();
   }
 
   if (xrMode != 'immersive-ar') {
