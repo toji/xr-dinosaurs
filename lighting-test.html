@@ -36,6 +36,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   </head>
 
   <body>
+    <div style='position: absolute; margin: 1em auto; z-index: 10; text-align: center; width: 100%;'>
+      <a href="intent://www.xrdinosaurs.com/media/models/light-test.glb#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;">
+        Native Test
+      </a>
+    </div>
     <script type="module">
       import * as THREE from './js/third-party/three.js/build/three.module.js';
       import { ARButton } from './js/third-party/three.js/examples/jsm/webxr/ARButton.js';
@@ -117,15 +122,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           xrLighting.xrSession = null;
         });
 
-        /*function onSelectStart() {
-          selecting = true;
-          var material = new THREE.MeshPhongMaterial( { color: 0xffffff * Math.random() } );
-          var mesh = new THREE.Mesh( geometry, material );
-          mesh.position.set( 0, 0, - 0.3 ).applyMatrix4( controller.matrixWorld );
-          mesh.quaternion.setFromRotationMatrix( controller.matrixWorld );
-          scene.add( mesh );
-        }*/
-
         controller = renderer.xr.getController(0);
         controller.addEventListener('selectstart', () => { selecting = true; });
         controller.addEventListener('selectend', () => { selecting = false; });
@@ -134,6 +130,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         //
 
         window.addEventListener('resize', onWindowResize, false);
+
+        /*var exporter = new GLTFExporter();
+
+        // Parse the input and generate the glTF output
+        container.addEventListener('click', () => {
+          exporter.parse( scene, ( gltf ) => {
+            console.log( gltf );
+            //downloadJSON( gltf );
+
+            let blob = new Blob([gltf], { type: 'application/zip' });
+            let blobURL = URL.createObjectURL(blob);
+
+            window.open(blobURL);
+          }, { binary: true } );
+        });*/
       }
 
       function onWindowResize() {
