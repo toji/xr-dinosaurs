@@ -55,7 +55,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       const SPHERE_DISTANCE = 1.6;
 
-      function init() {
+      async function init() {
         container = document.createElement('div');
         document.body.appendChild(container);
 
@@ -74,9 +74,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         }
 
         renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl });
-        //renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.physicallyCorrectLights = true;
         renderer.xr.enabled = true;
         container.appendChild(renderer.domElement);
 
@@ -111,6 +112,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           for (let ball of ballGroup.children) {
             ball.material.envMap = xrLighting.envMap;
             ball.material.needsUpdate = true;
+            scene.background = xrLighting.envMap;
           }
         });
 
@@ -131,20 +133,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         window.addEventListener('resize', onWindowResize, false);
 
-        /*var exporter = new GLTFExporter();
+        await xrLighting.loadHDRSkybox('media/textures/equirectangular/misty_pines_2k.hdr');
 
-        // Parse the input and generate the glTF output
-        container.addEventListener('click', () => {
-          exporter.parse( scene, ( gltf ) => {
-            console.log( gltf );
-            //downloadJSON( gltf );
-
-            let blob = new Blob([gltf], { type: 'application/zip' });
-            let blobURL = URL.createObjectURL(blob);
-
-            window.open(blobURL);
-          }, { binary: true } );
-        });*/
+        renderer.setAnimationLoop(render);
       }
 
       function onWindowResize() {
@@ -164,7 +155,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       init();
-      renderer.setAnimationLoop(render);
       
     </script>
   </body>
