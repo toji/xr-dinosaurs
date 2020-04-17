@@ -337,6 +337,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
 
       viewARButton.addEventListener('click', () => {
+        if (!arSupported) return;
+        
         appState.screen = SCREEN.Select;
         appState.viewMode = VIEW_MODE.AR;
         updateAppState();
