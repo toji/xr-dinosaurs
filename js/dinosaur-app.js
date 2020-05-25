@@ -24,6 +24,7 @@ import { XRButtonManager } from './xr-button.js';
 import { XRDinosaurLoader } from './dinosaurs/xr-dinosaur-loader.js';
 import { XRInputCursorManager } from './xr-input-cursor.js';
 import { XRInputRay } from './xr-input-ray.js';
+import { XRTeleportGuideline } from './xr-teleport.js';
 import { XRLighting } from './xr-lighting.js';
 import { XRStats } from './xr-stats.js';
 
@@ -73,6 +74,8 @@ let clock = new THREE.Clock();
 
 let listener = new THREE.AudioListener();
 let ambientSounds, hornSound;
+
+let teleportGuide = new XRTeleportGuideline();
 
 let screenshotList;
 let takeScreenshot = false;
@@ -155,6 +158,10 @@ function initControllers() {
     });
 
     targetRay.add(inputRay.clone());
+
+    if (index == 0) {
+      targetRay.add(teleportGuide);
+    }
     grip.add(model);
 
     buttonManager.addController(targetRay);
@@ -587,7 +594,7 @@ function render(time, xrFrame) {
       if (hitTestResults.length > 0) {
         pose = hitTestResults[0].getPose(renderer.xr.getReferenceSpace());
       }
-  
+
       if (pose) {
         xrDinosaur.visible = true;
         blobShadowManager.visible = true;
@@ -625,6 +632,7 @@ function render(time, xrFrame) {
   }
 
   if (controllers.length) {
+    teleportGuide.updateGuideForController(controllers[0].targetRay);
     cursorManager.update([controllers[0].targetRay, controllers[1].targetRay]);
   }
 
