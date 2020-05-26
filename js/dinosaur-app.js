@@ -24,7 +24,7 @@ import { XRButtonManager } from './xr-button.js';
 import { XRDinosaurLoader } from './dinosaurs/xr-dinosaur-loader.js';
 import { XRInputCursorManager } from './xr-input-cursor.js';
 import { XRInputRay } from './xr-input-ray.js';
-import { XRTeleportGuideline } from './xr-teleport.js';
+import { XRTeleportGuide } from './xr-teleport.js';
 import { XRLighting } from './xr-lighting.js';
 import { XRStats } from './xr-stats.js';
 
@@ -75,7 +75,7 @@ let clock = new THREE.Clock();
 let listener = new THREE.AudioListener();
 let ambientSounds, hornSound;
 
-let teleportGuide = new XRTeleportGuideline();
+let teleportGuide;
 
 let screenshotList;
 let takeScreenshot = false;
@@ -159,9 +159,6 @@ function initControllers() {
 
     targetRay.add(inputRay.clone());
 
-    if (index == 0) {
-      targetRay.add(teleportGuide);
-    }
     grip.add(model);
 
     buttonManager.addController(targetRay);
@@ -221,6 +218,9 @@ export function PreloadDinosaurApp(debug = false) {
   cursorManager = new XRInputCursorManager();
   scene.add(cursorManager);
   cursorManager.addCollider(buttonGroup);
+
+  teleportGuide = new XRTeleportGuide();
+  scene.add(teleportGuide);
 
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
   camera.position.set(0, 5.0, 5.0);
@@ -331,7 +331,9 @@ export function PreloadDinosaurApp(debug = false) {
 
     xrLighting.xrSession = null;
 
-    xrDinosaur.visible = true;
+    if (xrDinosaur) {
+      xrDinosaur.visible = true;
+    }
     blobShadowManager.visible = true;
 
     // Stop ambient jungle sounds once the user exits VR.

@@ -41,17 +41,21 @@ const RAY_TEXTURE_DATA = new Uint8Array([
   0xcc, 0xcc, 0xcc, 0x05, 0xbf, 0xbf, 0xbf, 0x04, 0xff, 0xff, 0xff, 0x02, 0xff, 0xff, 0xff, 0x01,
 ]);
 
-const RAY_LENGTH = 10.0;
-const RAY_RADIUS = 0.02;
 const RAY_FADE_END = 0.0035;
 const RAY_FADE_POINT = 0.00335;
-
-const TELEPORT_GUIDE_SEGMENTS = 16;
 
 const TMP_VEC = new THREE.Vector3();
 const TMP_VEC_P = new THREE.Vector3();
 const TMP_VEC_V = new THREE.Vector3();
 const GRAVITY = new THREE.Vector3(0,-9.8,0);
+
+const DEFAULT_GUIDE_OPTIONS = {
+  color: new THREE.Color(0x00ffff),
+  rayRadius: 0.03,
+  raySegments: 16,
+  dashCount: 8,
+  dashSpeed: 0.1
+};
 
 function guidePositionAtT(inVec,t,p,v,g) {
   inVec.copy(p);
@@ -60,10 +64,13 @@ function guidePositionAtT(inVec,t,p,v,g) {
   return inVec;
 }
 
-export class XRTeleportGuideline extends THREE.Mesh {
-  constructor() {
-    const r = RAY_RADIUS;
-    const l = RAY_LENGTH;
+export class XRTeleportGuide extends THREE.Group {
+  constructor(options) {
+    super();
+
+    this.options = Object.assign({}, DEFAULT_GUIDE_OPTIONS, options);
+
+    const r = this.options.rayRadius;
 
     let guidePositions = [];
     let guideUVs = [];
@@ -73,9 +80,8 @@ export class XRTeleportGuideline extends THREE.Mesh {
     // and additive blending so that it displays well in almost any situation.
 
     // Positions will have to be recomputed every frame, so we're really just
-    // filling in dummy values here. The rest of the mesh can stay constant,
-    // though.
-    for (let i = 0; i < TELEPORT_GUIDE_SEGMENTS; ++i) {
+    // filling in dummy values here. The rest of the mesh will stay constant.
+    for (let i = 0; i < this.options.raySegments; ++i) {
       if (i == 0) {
         guidePositions.push(
           0, r, 0,
@@ -90,14 +96,13 @@ export class XRTeleportGuideline extends THREE.Mesh {
           1.0, 1.0);
       }
 
-      const t1 = (i+1) / TELEPORT_GUIDE_SEGMENTS;
-      const l1 = -l * t1;
+      const t1 = (i+1) / this.options.raySegments;
 
       guidePositions.push(
-        0, r, l1,
-        0, -r, l1,
-        r, 0, l1,
-        -r, 0, l1);
+        0, r, -t1,
+        0, -r, -t1,
+        r, 0, -t1,
+        -r, 0, -t1);
 
       guideUVs.push(
         0.0, 1.0 - t1,
@@ -117,10 +122,17 @@ export class XRTeleportGuideline extends THREE.Mesh {
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(guidePositions), 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(guideUVs), 2));
 
+    let dashFactor = 2.0 * Math.PI * this.options.dashCount;
+    if (Number.isInteger(dashFactor)) {
+      dashFactor = dashFactor + '.0';
+    }
+
     const guideTexture = new THREE.DataTexture(RAY_TEXTURE_DATA, 48, 1);
     const material = new THREE.ShaderMaterial({
       uniforms: {
         map: { value: guideTexture },
+        color: { value: this.options.color },
+        time: { value: 0.0 },
       },
 
       transparent: true,
@@ -136,26 +148,47 @@ export class XRTeleportGuideline extends THREE.Mesh {
         }`,
       fragmentShader: `
         uniform sampler2D map;
+        uniform float time;
+        uniform vec3 color;
         varying vec2 vUv;
 
         const float fadePoint = ${RAY_FADE_POINT};
         const float fadeEnd = ${RAY_FADE_END};
-        const vec4 rayColor = vec4(1.0, 1.0, 1.0, 1.0);
 
         void main() {
           float front_fade_factor = 1.0 - clamp(1.0 - (vUv.y - fadePoint) / (1.0 - fadePoint), 0.0, 1.0);
           float back_fade_factor = clamp((vUv.y - fadePoint) / (fadeEnd - fadePoint), 0.0, 1.0);
-          vec4 color = rayColor * texture2D(map, vUv);
-          float opacity = color.a * front_fade_factor * back_fade_factor;
-          gl_FragColor = vec4(color.rgb * opacity, opacity);
+          float dash_fade_factor = clamp(sin(((vUv.y + time) * ${dashFactor}) + 1.5) + 0.5, 0.0, 1.0);
+          vec4 rayColor = vec4(color, 1.0) * texture2D(map, vUv);
+          float opacity = rayColor.a * dash_fade_factor; //front_fade_factor * back_fade_factor;
+          gl_FragColor = vec4(rayColor.rgb * opacity, opacity);
         }`
     });
 
-    super(geometry, material);
+    this.guidelineMesh = new THREE.Mesh(geometry, material);
+    this.add(this.guidelineMesh);
+
+    const targetTexture = new THREE.TextureLoader().load('./media/textures/teleport-target.png');
+    this.targetMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.75, 0.75, 1, 1),
+      new THREE.MeshBasicMaterial({
+          map: targetTexture,
+          blending: THREE.AdditiveBlending,
+          transparent: true
+      })
+    );
+    this.targetMesh.rotation.x = -Math.PI * 0.5;
+    this.add(this.targetMesh);
+
+    this.clock = new THREE.Clock();
+
+    this.uniforms = material.uniforms;
   }
 
   updateGuideForController(controller) {
-    const r = RAY_RADIUS;
+    const r = this.options.rayRadius;
+
+    this.uniforms.time.value = this.clock.getElapsedTime() * this.options.dashSpeed;
 
     // Controller start position
     const p = controller.getWorldPosition(TMP_VEC_P);
@@ -169,12 +202,13 @@ export class XRTeleportGuideline extends THREE.Mesh {
     // Time for tele ball to hit ground
     const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*GRAVITY.y))/GRAVITY.y;
 
+    const segments = this.options.raySegments;
     const vert = TMP_VEC.set(0,0,0);
     let guidePositions = [];
-    for (let i = 0; i <= TELEPORT_GUIDE_SEGMENTS; i++) {
+    for (let i = 0; i <= segments; i++) {
         // Set vertex to current position of the virtual ball at time t
-        guidePositionAtT(vert,i*t/TELEPORT_GUIDE_SEGMENTS,p,v,GRAVITY);
-        controller.worldToLocal(vert);
+        guidePositionAtT(vert, i*t/segments, p, v, GRAVITY);
+        //controller.worldToLocal(vert);
 
         // TODO: The cross section here is wrong, and will get "squished" as the
         // guide becomes more vertical or the user turns.
@@ -184,12 +218,14 @@ export class XRTeleportGuideline extends THREE.Mesh {
           vert.x + r, vert.y, vert.z,
           vert.x - r, vert.y, vert.z);
     }
-    this.geometry.attributes.position.array.set(guidePositions);
-    this.geometry.attributes.position.needsUpdate = true;
 
-    // Place the light and sprite near the end of the guide
-    /*guidePositionAtT(guidelight.position,t*0.98,p,v,g);
-    guidePositionAtT(guidesprite.position,t*0.98,p,v,g);*/
+    const geometry = this.guidelineMesh.geometry;
+    geometry.attributes.position.array.set(guidePositions);
+    geometry.attributes.position.needsUpdate = true;
+    geometry.computeBoundingSphere();
+
+    // Place the target mesh near the end of the guide
+    guidePositionAtT(this.targetMesh.position, t*0.98, p, v, GRAVITY);
   }
 }
 
