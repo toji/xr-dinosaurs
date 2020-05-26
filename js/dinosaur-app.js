@@ -51,7 +51,7 @@ const BUTTON_HEIGHT_DEADZONE = 0.15;
 
 let preloadPromise, appRunning = false;
 let stats, controls;
-let camera, scene, renderer;
+let camera, cameraGroup, scene, renderer;
 let viewerProxy;
 let gltfLoader;
 let xrDinosaurLoader, xrDinosaur;
@@ -76,6 +76,7 @@ let listener = new THREE.AudioListener();
 let ambientSounds, hornSound;
 
 let teleportGuide;
+let teleportingController = null;
 
 let screenshotList;
 let takeScreenshot = false;
@@ -138,6 +139,26 @@ function initDebugUI() {
   document.body.appendChild(gui.domElement);
 }
 
+function controllerSelectStart() {
+  if (!teleportingController) {
+    teleportingController = this;
+    teleportGuide.visible = true;
+  }
+}
+
+function controllerSelectEnd() {
+  if (teleportingController == this) {
+    let offset = new THREE.Vector3();
+    teleportGuide.getTeleportOffset(offset, renderer, camera, teleportingController);
+
+    // Move the camera group by the given offset.
+    cameraGroup.position.add(offset);
+
+    teleportGuide.visible = false;
+    teleportingController = null;
+  }
+}
+
 function initControllers() {
   if (controllers.length) {
     return;
@@ -159,11 +180,14 @@ function initControllers() {
 
     targetRay.add(inputRay.clone());
 
+    targetRay.addEventListener('selectstart', controllerSelectStart);
+    targetRay.addEventListener('selectend', controllerSelectEnd);
+
     grip.add(model);
 
     buttonManager.addController(targetRay);
-    environment.platform.add(targetRay);
-    environment.platform.add(grip);
+    cameraGroup.add(targetRay);
+    cameraGroup.add(grip);
 
     model.setEnvironmentMap(xrLighting.envMap);
 
@@ -225,7 +249,11 @@ export function PreloadDinosaurApp(debug = false) {
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
   camera.position.set(0, 5.0, 5.0);
   camera.add(listener);
-  environment.platform.add(camera);
+
+  cameraGroup = new THREE.Group();
+  cameraGroup.add(camera);
+
+  environment.platform.add(cameraGroup);
 
   viewerProxy = new THREE.Object3D();
   camera.add(viewerProxy);
@@ -634,8 +662,11 @@ function render(time, xrFrame) {
   }
 
   if (controllers.length) {
-    teleportGuide.updateGuideForController(controllers[0].targetRay);
     cursorManager.update([controllers[0].targetRay, controllers[1].targetRay]);
+  }
+
+  if (teleportingController) {
+    teleportGuide.updateGuideForController(teleportingController);
   }
 
   if (takeScreenshot) {

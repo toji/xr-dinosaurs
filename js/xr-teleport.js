@@ -26,6 +26,15 @@
 
 import * as THREE from './third-party/three.js/build/three.module.js';
 
+const DEFAULT_GUIDE_OPTIONS = {
+  color: new THREE.Color(0x00ffff),
+  rayRadius: 0.03,
+  raySegments: 16,
+  dashCount: 8,
+  dashSpeed: 0.1,
+  teleportVelocity: 8
+};
+
 const RAY_TEXTURE_DATA = new Uint8Array([
   0xff, 0xff, 0xff, 0x01, 0xff, 0xff, 0xff, 0x02, 0xbf, 0xbf, 0xbf, 0x04, 0xcc, 0xcc, 0xcc, 0x05,
   0xdb, 0xdb, 0xdb, 0x07, 0xcc, 0xcc, 0xcc, 0x0a, 0xd8, 0xd8, 0xd8, 0x0d, 0xd2, 0xd2, 0xd2, 0x11,
@@ -41,21 +50,10 @@ const RAY_TEXTURE_DATA = new Uint8Array([
   0xcc, 0xcc, 0xcc, 0x05, 0xbf, 0xbf, 0xbf, 0x04, 0xff, 0xff, 0xff, 0x02, 0xff, 0xff, 0xff, 0x01,
 ]);
 
-const RAY_FADE_END = 0.0035;
-const RAY_FADE_POINT = 0.00335;
-
 const TMP_VEC = new THREE.Vector3();
 const TMP_VEC_P = new THREE.Vector3();
 const TMP_VEC_V = new THREE.Vector3();
 const GRAVITY = new THREE.Vector3(0,-9.8,0);
-
-const DEFAULT_GUIDE_OPTIONS = {
-  color: new THREE.Color(0x00ffff),
-  rayRadius: 0.03,
-  raySegments: 16,
-  dashCount: 8,
-  dashSpeed: 0.1
-};
 
 function guidePositionAtT(inVec,t,p,v,g) {
   inVec.copy(p);
@@ -152,15 +150,13 @@ export class XRTeleportGuide extends THREE.Group {
         uniform vec3 color;
         varying vec2 vUv;
 
-        const float fadePoint = ${RAY_FADE_POINT};
-        const float fadeEnd = ${RAY_FADE_END};
+        const float fadePoint = 0.05; // Fade out the last 5% of the line
 
         void main() {
-          float front_fade_factor = 1.0 - clamp(1.0 - (vUv.y - fadePoint) / (1.0 - fadePoint), 0.0, 1.0);
-          float back_fade_factor = clamp((vUv.y - fadePoint) / (fadeEnd - fadePoint), 0.0, 1.0);
+          float end_fade_factor = clamp((vUv.y - fadePoint) / (fadePoint), 0.0, 1.0);
           float dash_fade_factor = clamp(sin(((vUv.y + time) * ${dashFactor}) + 1.5) + 0.5, 0.0, 1.0);
           vec4 rayColor = vec4(color, 1.0) * texture2D(map, vUv);
-          float opacity = rayColor.a * dash_fade_factor; //front_fade_factor * back_fade_factor;
+          float opacity = rayColor.a * dash_fade_factor * end_fade_factor;
           gl_FragColor = vec4(rayColor.rgb * opacity, opacity);
         }`
     });
@@ -185,6 +181,7 @@ export class XRTeleportGuide extends THREE.Group {
     this.uniforms = material.uniforms;
   }
 
+  // Updates the rendered guideline to match the given controller
   updateGuideForController(controller) {
     const r = this.options.rayRadius;
 
@@ -196,8 +193,8 @@ export class XRTeleportGuide extends THREE.Group {
     // Set Vector V to the direction of the controller, at 1m/s
     const v = controller.getWorldDirection(TMP_VEC_V);
 
-    // Scale the initial velocity to 8m/s
-    v.multiplyScalar(8);
+    // Scale the initial velocity
+    v.multiplyScalar(this.options.teleportVelocity);
 
     // Time for tele ball to hit ground
     const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*GRAVITY.y))/GRAVITY.y;
@@ -226,6 +223,22 @@ export class XRTeleportGuide extends THREE.Group {
 
     // Place the target mesh near the end of the guide
     guidePositionAtT(this.targetMesh.position, t*0.98, p, v, GRAVITY);
+  }
+
+  getTeleportOffset(outputVector, renderer, camera, controller) {
+    // feet position
+    const feetPos = renderer.xr.getCamera(camera).getWorldPosition(TMP_VEC);
+    feetPos.y = 0;
+
+    // cursor position
+    const p = controller.getWorldPosition(TMP_VEC_P);
+    const v = controller.getWorldDirection(TMP_VEC_V);
+    v.multiplyScalar(this.options.teleportVelocity);
+    const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*GRAVITY.y))/GRAVITY.y;
+    guidePositionAtT(outputVector, t, p, v, GRAVITY);
+
+    // Get the offset
+    return outputVector.sub(feetPos);
   }
 }
 
