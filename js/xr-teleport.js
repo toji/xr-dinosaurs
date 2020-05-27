@@ -28,11 +28,15 @@ import * as THREE from './third-party/three.js/build/three.module.js';
 
 const DEFAULT_GUIDE_OPTIONS = {
   color: new THREE.Color(0x00ffff),
-  rayRadius: 0.03,
+  invalidColor: new THREE.Color(0xdd0000),
+  validDestinationCallback: null,
+  targetTexture: null,
+  rayRadius: 0.06,
   raySegments: 16,
   dashCount: 8,
-  dashSpeed: 0.1,
-  teleportVelocity: 8
+  dashSpeed: 0.2,
+  teleportVelocity: 8,
+  groundHeight: 0
 };
 
 const RAY_TEXTURE_DATA = new Uint8Array([
@@ -164,28 +168,33 @@ export class XRTeleportGuide extends THREE.Group {
     this.guidelineMesh = new THREE.Mesh(geometry, material);
     this.add(this.guidelineMesh);
 
-    const targetTexture = new THREE.TextureLoader().load('./media/textures/teleport-target.png');
-    this.targetMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.75, 0.75, 1, 1),
-      new THREE.MeshBasicMaterial({
-          map: targetTexture,
-          blending: THREE.AdditiveBlending,
-          transparent: true
-      })
-    );
+    if (this.options.targetTexture) {
+      this.targetMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.75, 0.75, 1, 1),
+        new THREE.MeshBasicMaterial({
+            map: this.options.targetTexture,
+            blending: THREE.AdditiveBlending,
+            transparent: true,
+            depthWrite: false,
+        })
+      );
+    } else {
+      this.targetMesh = new XRDefaultTeleportTarget(this.options.color);
+      // TODO: Add a default mesh for when a target texture isn't provided.
+    }
+
     this.targetMesh.rotation.x = -Math.PI * 0.5;
     this.add(this.targetMesh);
 
     this.clock = new THREE.Clock();
 
     this.uniforms = material.uniforms;
+    this.wasValid = true;
   }
 
   // Updates the rendered guideline to match the given controller
   updateGuideForController(controller) {
     const r = this.options.rayRadius;
-
-    this.uniforms.time.value = this.clock.getElapsedTime() * this.options.dashSpeed;
 
     // Controller start position
     const p = controller.getWorldPosition(TMP_VEC_P);
@@ -193,11 +202,14 @@ export class XRTeleportGuide extends THREE.Group {
     // Set Vector V to the direction of the controller, at 1m/s
     const v = controller.getWorldDirection(TMP_VEC_V);
 
+    // Rotate the target texture to always be oriented the same way as the guide beam.
+    this.targetMesh.rotation.z = Math.atan2(v.x, v.z);
+
     // Scale the initial velocity
     v.multiplyScalar(this.options.teleportVelocity);
 
     // Time for tele ball to hit ground
-    const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*GRAVITY.y))/GRAVITY.y;
+    const t = (-v.y + Math.sqrt(v.y**2 - 2*p.y*GRAVITY.y))/GRAVITY.y;
 
     const segments = this.options.raySegments;
     const vert = TMP_VEC.set(0,0,0);
@@ -221,8 +233,27 @@ export class XRTeleportGuide extends THREE.Group {
     geometry.attributes.position.needsUpdate = true;
     geometry.computeBoundingSphere();
 
-    // Place the target mesh near the end of the guide
-    guidePositionAtT(this.targetMesh.position, t*0.98, p, v, GRAVITY);
+    const isValid = this.options.validDestinationCallback ? this.options.validDestinationCallback(vert) : true;
+
+    if (isValid) {
+      // Place the target mesh near the end of the guide
+      guidePositionAtT(this.targetMesh.position, t*0.98, p, v, GRAVITY);
+
+      // Update the timer for the scrolling dashes
+      this.uniforms.time.value = this.clock.getElapsedTime() * this.options.dashSpeed;
+    }
+
+    // If the teleportation target has switched from valid to invalid or visa-versa
+    // then change the style of the guideline/target to indicate that.
+    if (isValid && !this.wasValid) {
+      this.uniforms.color.value = this.options.color;
+      this.targetMesh.visible = true;
+    } else if (!isValid && this.wasValid) {
+      this.uniforms.color.value = this.options.invalidColor;
+      this.targetMesh.visible = false;
+    }
+
+    this.wasValid = isValid;
   }
 
   getTeleportOffset(outputVector, renderer, camera, controller) {
@@ -237,8 +268,81 @@ export class XRTeleportGuide extends THREE.Group {
     const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*GRAVITY.y))/GRAVITY.y;
     guidePositionAtT(outputVector, t, p, v, GRAVITY);
 
+    const isValid = this.options.validDestinationCallback ? this.options.validDestinationCallback(outputVector) : true;
+
     // Get the offset
-    return outputVector.sub(feetPos);
+    outputVector.sub(feetPos);
+
+    // Return whether or not this is a valid teleport location
+    return isValid;
   }
 }
 
+const TARGET_OUTER_RADIUS = 0.4;
+const TARGET_INNER_RADIUS = 0.2;
+const TARGET_OUTER_LUMINANCE = 1.0;
+const TARGET_INNER_LUMINANCE = 0.0;
+const TARGET_SEGMENTS = 16;
+
+// Creates a simple circular teleport target mesh to use when no texture is supplied
+class XRDefaultTeleportTarget extends THREE.Mesh {
+  constructor(color) {
+    let targetVerts = [];
+    let targetIndices = [];
+
+    let segRad = (2.0 * Math.PI) / TARGET_SEGMENTS;
+
+    // Target Ring
+    for (let i = 0; i < TARGET_SEGMENTS; ++i) {
+      let rad = i * segRad;
+      let x = Math.cos(rad);
+      let y = Math.sin(rad);
+      targetVerts.push(x * TARGET_OUTER_RADIUS, y * TARGET_OUTER_RADIUS,
+        TARGET_OUTER_LUMINANCE);
+      targetVerts.push(x * TARGET_INNER_RADIUS, y * TARGET_INNER_RADIUS,
+        TARGET_INNER_LUMINANCE);
+
+      if (i > 0) {
+        let idx = (i * 2);
+        targetIndices.push(idx, idx-1, idx-2);
+        targetIndices.push(idx, idx+1, idx-1);
+      }
+    }
+
+    let idx = (TARGET_SEGMENTS * 2);
+    targetIndices.push(0, idx-1, idx-2);
+    targetIndices.push(0, 1, idx-1);
+
+    let geometry = new THREE.BufferGeometry();
+    geometry.setIndex(targetIndices);
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(targetVerts), 3));
+
+    let material = new THREE.ShaderMaterial({
+      uniforms: {
+        cursorColor: { value: color },
+      },
+
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+
+      vertexShader: `
+        attribute float opacity;
+        varying float vLuminance;
+
+        void main() {
+          vLuminance = position.z;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position.xy, 0.0, 1.0);
+        }`,
+      fragmentShader: `
+        uniform vec3 cursorColor;
+        varying float vLuminance;
+
+        void main() {
+          gl_FragColor = vec4(cursorColor * vLuminance, 1.0);
+        }`
+    });
+
+    super(geometry, material);
+  }
+}

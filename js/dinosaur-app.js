@@ -142,6 +142,7 @@ function initDebugUI() {
 function controllerSelectStart() {
   if (!teleportingController) {
     teleportingController = this;
+    teleportingController.visible = false; // This is target ray
     teleportGuide.visible = true;
   }
 }
@@ -149,12 +150,15 @@ function controllerSelectStart() {
 function controllerSelectEnd() {
   if (teleportingController == this) {
     let offset = new THREE.Vector3();
-    teleportGuide.getTeleportOffset(offset, renderer, camera, teleportingController);
+    const validDest = teleportGuide.getTeleportOffset(offset, renderer, camera, teleportingController);
 
-    // Move the camera group by the given offset.
-    cameraGroup.position.add(offset);
+    if (validDest) {
+      // Move the camera group by the given offset.
+      cameraGroup.position.add(offset);
+    }
 
     teleportGuide.visible = false;
+    teleportingController.visible = true;
     teleportingController = null;
   }
 }
@@ -211,6 +215,11 @@ function OnAppStateChange(state) {
   }
 }
 
+function isValidDestination(dest) {
+  // Does a really simple bounds check to ensure users can't teleport beyond the inner fence.
+  return (dest.x > -25.5 && dest.x < 26 && dest.z > -35 && dest.z < 16.5);
+}
+
 export function PreloadDinosaurApp(debug = false) {
   if (preloadPromise) {
     return preloadPromise;
@@ -243,7 +252,10 @@ export function PreloadDinosaurApp(debug = false) {
   scene.add(cursorManager);
   cursorManager.addCollider(buttonGroup);
 
-  teleportGuide = new XRTeleportGuide();
+  teleportGuide = new XRTeleportGuide({
+    targetTexture: new textureLoader.load('media/textures/teleport-target.png'),
+    validDestinationCallback: isValidDestination
+  });
   scene.add(teleportGuide);
 
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
