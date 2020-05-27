@@ -106,6 +106,9 @@ export class XRTeleportGuide extends THREE.Group {
 
     let dashFactor = 2.0 * Math.PI * this.options.dashCount;
     if (Number.isInteger(dashFactor)) {
+      // This is silly, but we have to do it to ensure that injecting the dash
+      // count into the shader won't break if we happen to land on an integer
+      // value (like 0)
       dashFactor = dashFactor + '.0';
     }
 
@@ -160,7 +163,6 @@ export class XRTeleportGuide extends THREE.Group {
       );
     } else {
       this.targetMesh = new XRDefaultTeleportTarget(this.options.color);
-      // TODO: Add a default mesh for when a target texture isn't provided.
     }
 
     this.targetMesh.rotation.x = -Math.PI * 0.5;
@@ -213,6 +215,7 @@ export class XRTeleportGuide extends THREE.Group {
     geometry.attributes.position.needsUpdate = true;
     geometry.computeBoundingSphere();
 
+    // Check to see if our destination point is valid
     const isValid = this.options.validDestinationCallback ? this.options.validDestinationCallback(vert) : true;
 
     if (isValid) {
@@ -236,6 +239,8 @@ export class XRTeleportGuide extends THREE.Group {
     this.wasValid = isValid;
   }
 
+  // Get's the offset from the current camera location to the teleport destination
+  // Returns true if that destination is a valid one to teleport to.
   getTeleportOffset(outputVector, renderer, camera, controller) {
     // feet position
     const feetPos = renderer.xr.getCamera(camera).getWorldPosition(TMP_VEC);
