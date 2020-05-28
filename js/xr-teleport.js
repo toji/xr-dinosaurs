@@ -80,6 +80,7 @@ export class XRLocomotionEffectFade extends XRLocomotionEffect {
 
   startEffect(outputPos, startPos, endPos) {
     this.fadeMesh.visible = true;
+    this.fadeMaterial.uniforms.opacity.value = 0.0;
     this.moved = false;
   }
 
@@ -92,12 +93,14 @@ export class XRLocomotionEffectFade extends XRLocomotionEffect {
   }
 
   endEffect() {
-    this.fadeMesh.visible = true;
+    this.fadeMesh.visible = false;
     if (!this.moved) {
       outputPos.copy(endPos);
     }
   }
 }
+
+const AXIS_THRESHOLD = 0.6;
 
 export class XRLocomotionManager extends THREE.Group {
   constructor(options = {}) {
@@ -132,7 +135,8 @@ export class XRLocomotionManager extends THREE.Group {
       controller,
       inputSource: null,
       touchpadActive: false,
-      thumbstickActive: false
+      thumbstickActive: false,
+      turnReady: true
     };
     this.inputs.push(input);
     controller.addEventListener('connected', (event) => {
@@ -167,17 +171,26 @@ export class XRLocomotionManager extends THREE.Group {
       if (gamepad.buttons.length > 2 && gamepad.buttons[2].pressed) {
         if (!input.touchpadActive) {
           input.touchpadActive = true;
-          this.startSelectDestination(input);
+
+          if (gamepad.axes.length > 1 && Math.abs(gamepad.axes[1]) > AXIS_THRESHOLD) {
+            // Teleport if you push the front/back
+            this.startSelectDestination(input);
+          } else if (gamepad.axes.length > 0) {
+            // Snap turning if you push the left/right of the touchpad
+            if (gamepad.axes[0] < -AXIS_THRESHOLD) {
+              this.rotation.y += Math.PI/4;
+            } else if (gamepad.axes[0] > AXIS_THRESHOLD) {
+              this.rotation.y -= Math.PI/4;
+            }
+          }
         }
       } else if (input.touchpadActive) {
-        if (input.touchpadActive) {
-          this.endSelectDestination(input, renderer, camera);
-          input.touchpadActive = false;
-        }
+        this.endSelectDestination(input, renderer, camera);
+        input.touchpadActive = false;
       }
 
-      // Thumbstick forward
-      if (gamepad.axes.length > 3 && gamepad.axes[3] < -0.7) {
+      // Thumbstick forward/backward
+      if (gamepad.axes.length > 3 && Math.abs(gamepad.axes[3]) > AXIS_THRESHOLD) {
         if (!input.thumbstickActive) {
           input.thumbstickActive = true;
           this.startSelectDestination(input);
@@ -186,6 +199,23 @@ export class XRLocomotionManager extends THREE.Group {
         if (input.thumbstickActive) {
           this.endSelectDestination(input, renderer, camera);
           input.thumbstickActive = false;
+        }
+      }
+
+      // Thumbstick snap turn left/right
+      if (gamepad.axes.length > 2) {
+        if (gamepad.axes[2] < -AXIS_THRESHOLD) {
+          if (input.turnReady) {
+            this.rotation.y += Math.PI/4;
+            input.turnReady = false;
+          }
+        } else if (gamepad.axes[2] > AXIS_THRESHOLD) {
+          if (input.turnReady) {
+            this.rotation.y -= Math.PI/4;
+            input.turnReady = false;
+          }
+        } else {
+          input.turnReady = true;
         }
       }
     }
