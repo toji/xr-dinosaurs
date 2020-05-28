@@ -22,7 +22,7 @@ export class XRLocomotionEffect extends THREE.Object3D {
 }
 
 // Immediately jump to the destination with no transition
-const XRLocomotionEffectSnap = XRLocomotionEffect;
+export const XRLocomotionEffectSnap = XRLocomotionEffect;
 
 // Quickly slide to the new location.
 export class XRLocomotionEffectSlide extends XRLocomotionEffect {
