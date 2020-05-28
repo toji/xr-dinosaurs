@@ -275,6 +275,10 @@ export function PreloadDinosaurApp(debug = false) {
   //renderer.physicallyCorrectLights = true;
   renderer.xr.enabled = true;
 
+  // This is useful when debugging, but can cause massive blocking operations
+  // on the main thread so turn it off for "real" work.
+  renderer.debug.checkShaderErrors = debugEnabled;
+
   xrLighting = new XRLighting(renderer);
   scene.add(xrLighting);
 
