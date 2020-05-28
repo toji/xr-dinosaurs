@@ -6,6 +6,99 @@
 
 import * as THREE from './third-party/three.js/build/three.module.js';
 
+const OFFSET_VEC = new THREE.Vector3();
+
+export class XRLocomotionManager extends THREE.Group {
+  constructor(options) {
+    super();
+
+    this.inputs = [];
+    this.teleportingInput = null;
+
+    this.teleportGuide = new XRTeleportGuide(options);
+    this.teleportGuide.visible = false;
+    this.add(this.teleportGuide);
+  }
+
+  watchController(controller) {
+    const input = {
+      controller,
+      inputSource: null,
+      touchpadActive: false,
+      thumbstickActive: false
+    };
+    this.inputs.push(input);
+    controller.addEventListener('connected', (event) => {
+      input.inputSource = event.data;
+    });
+  }
+
+  update(renderer, camera) {
+    for (let input of this.inputs) {
+      const gamepad = input.inputSource ? input.inputSource.gamepad : null;
+      if(!gamepad) { continue; }
+
+      // TODO: Would be nice to make these more configurable, but for now I'm
+      // going to statically map them. Either pressing the touchpad or holding
+      // the thumbstick forward will trigger teleportation.
+
+      // Touchpad pressed
+      if (gamepad.buttons.length > 2 && gamepad.buttons[2].pressed) {
+        if (!input.touchpadActive) {
+          input.touchpadActive = true;
+          this.startTeleport(input);
+        }
+      } else if (input.touchpadActive) {
+        if (input.touchpadActive) {
+          this.endTeleport(input, renderer, camera);
+          input.touchpadActive = false;
+        }
+      }
+
+      // Thumbstick forward
+      if (gamepad.axes.length > 3 && gamepad.axes[3] < -0.7) {
+        if (!input.thumbstickActive) {
+          input.thumbstickActive = true;
+          this.startTeleport(input);
+        }
+      } else if (input.thumbstickActive) {
+        if (input.thumbstickActive) {
+          this.endTeleport(input, renderer, camera);
+          input.thumbstickActive = false;
+        }
+      }
+    }
+
+    if (this.teleportingInput) {
+      this.teleportGuide.updateGuideForController(this.teleportingInput.controller);
+    }
+  }
+
+  startTeleport(input) {
+    this.teleportingInput = input;
+    this.teleportGuide.visible = true;
+  }
+
+  endTeleport(input, renderer, camera) {
+    if (!input || input != this.teleportingInput) { return; }
+
+    const xrCamera = renderer.xr.getCamera(camera);
+    const validDest = this.teleportGuide.getTeleportOffset(OFFSET_VEC, xrCamera, this.teleportingInput.controller);
+
+    if (validDest) {
+      // Move the camera group by the given offset.
+      this.position.add(OFFSET_VEC);
+    }
+
+    this.teleportingInput = null;
+    this.teleportGuide.visible = false;
+  }
+}
+
+//
+// Teleportation guideline
+//
+
 const DEFAULT_GUIDE_OPTIONS = {
   color: new THREE.Color(0x00ffff),
   invalidColor: new THREE.Color(0xdd0000),
@@ -199,7 +292,7 @@ export class XRTeleportGuide extends THREE.Group {
     for (let i = 0; i <= segments; i++) {
         // Set vertex to current position of the virtual ball at time t
         guidePositionAtT(vert, i*t/segments, p, v, GRAVITY);
-        //controller.worldToLocal(vert);
+        this.worldToLocal(vert);
 
         // TODO: The cross section here is wrong, and will get "squished" as the
         // guide becomes more vertical or the user turns.
@@ -216,11 +309,13 @@ export class XRTeleportGuide extends THREE.Group {
     geometry.computeBoundingSphere();
 
     // Check to see if our destination point is valid
+    guidePositionAtT(vert, t, p, v, GRAVITY);
     const isValid = this.options.validDestinationCallback ? this.options.validDestinationCallback(vert) : true;
 
     if (isValid) {
       // Place the target mesh near the end of the guide
       guidePositionAtT(this.targetMesh.position, t*0.98, p, v, GRAVITY);
+      this.worldToLocal(this.targetMesh.position);
 
       // Update the timer for the scrolling dashes
       this.uniforms.time.value = this.clock.getElapsedTime() * this.options.dashSpeed;
@@ -239,11 +334,11 @@ export class XRTeleportGuide extends THREE.Group {
     this.wasValid = isValid;
   }
 
-  // Get's the offset from the current camera location to the teleport destination
+  // Get's the offset from the target's current location to the teleport destination
   // Returns true if that destination is a valid one to teleport to.
-  getTeleportOffset(outputVector, renderer, camera, controller) {
+  getTeleportOffset(outputVector, target, controller) {
     // feet position
-    const feetPos = renderer.xr.getCamera(camera).getWorldPosition(TMP_VEC);
+    const feetPos = target.getWorldPosition(TMP_VEC);
     feetPos.y = 0;
 
     // cursor position
@@ -262,6 +357,10 @@ export class XRTeleportGuide extends THREE.Group {
     return isValid;
   }
 }
+
+//
+// Default teleport target mesh
+//
 
 const TARGET_OUTER_RADIUS = 0.4;
 const TARGET_INNER_RADIUS = 0.2;

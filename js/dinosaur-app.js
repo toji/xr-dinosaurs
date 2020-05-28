@@ -24,7 +24,7 @@ import { XRButtonManager } from './xr-button.js';
 import { XRDinosaurLoader } from './dinosaurs/xr-dinosaur-loader.js';
 import { XRInputCursorManager } from './xr-input-cursor.js';
 import { XRInputRay } from './xr-input-ray.js';
-import { XRTeleportGuide } from './xr-teleport.js';
+import { XRTeleportGuide, XRLocomotionManager } from './xr-teleport.js';
 import { XRLighting } from './xr-lighting.js';
 import { XRStats } from './xr-stats.js';
 
@@ -75,8 +75,7 @@ let clock = new THREE.Clock();
 let listener = new THREE.AudioListener();
 let ambientSounds, hornSound;
 
-let teleportGuide;
-let teleportingController = null;
+let locomotionManager;
 
 let screenshotList;
 let takeScreenshot = false;
@@ -139,30 +138,6 @@ function initDebugUI() {
   document.body.appendChild(gui.domElement);
 }
 
-function controllerSelectStart() {
-  if (!teleportingController) {
-    teleportingController = this;
-    teleportingController.visible = false; // This is target ray
-    teleportGuide.visible = true;
-  }
-}
-
-function controllerSelectEnd() {
-  if (teleportingController == this) {
-    let offset = new THREE.Vector3();
-    const validDest = teleportGuide.getTeleportOffset(offset, renderer, camera, teleportingController);
-
-    if (validDest) {
-      // Move the camera group by the given offset.
-      cameraGroup.position.add(offset);
-    }
-
-    teleportGuide.visible = false;
-    teleportingController.visible = true;
-    teleportingController = null;
-  }
-}
-
 function initControllers() {
   if (controllers.length) {
     return;
@@ -184,14 +159,13 @@ function initControllers() {
 
     targetRay.add(inputRay.clone());
 
-    targetRay.addEventListener('selectstart', controllerSelectStart);
-    targetRay.addEventListener('selectend', controllerSelectEnd);
-
     grip.add(model);
 
     buttonManager.addController(targetRay);
-    cameraGroup.add(targetRay);
-    cameraGroup.add(grip);
+    locomotionManager.watchController(targetRay);
+
+    locomotionManager.add(targetRay);
+    locomotionManager.add(grip);
 
     model.setEnvironmentMap(xrLighting.envMap);
 
@@ -252,20 +226,16 @@ export function PreloadDinosaurApp(debug = false) {
   scene.add(cursorManager);
   cursorManager.addCollider(buttonGroup);
 
-  teleportGuide = new XRTeleportGuide({
+  locomotionManager = new XRLocomotionManager({
     targetTexture: new textureLoader.load('media/textures/teleport-target.png'),
     validDestinationCallback: isValidDestination
   });
-  scene.add(teleportGuide);
+  environment.platform.add(locomotionManager);
 
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
   camera.position.set(0, 5.0, 5.0);
   camera.add(listener);
-
-  cameraGroup = new THREE.Group();
-  cameraGroup.add(camera);
-
-  environment.platform.add(cameraGroup);
+  locomotionManager.add(camera);
 
   viewerProxy = new THREE.Object3D();
   camera.add(viewerProxy);
@@ -677,9 +647,7 @@ function render(time, xrFrame) {
     cursorManager.update([controllers[0].targetRay, controllers[1].targetRay]);
   }
 
-  if (teleportingController) {
-    teleportGuide.updateGuideForController(teleportingController);
-  }
+  locomotionManager.update(renderer, camera);
 
   if (takeScreenshot) {
     renderer.setPixelRatio(window.devicePixelRatio * 2);
