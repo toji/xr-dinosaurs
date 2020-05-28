@@ -8,12 +8,113 @@ import * as THREE from './third-party/three.js/build/three.module.js';
 
 const OFFSET_VEC = new THREE.Vector3();
 
-export class XRLocomotionManager extends THREE.Group {
-  constructor(options) {
+export class XRLocomotionEffect extends THREE.Object3D {
+  constructor() {
     super();
+    this.duration = 0;
+  }
+
+  startEffect(outputPos, startPos, endPos) {}
+  updateEffect(outputPos, startPos, endPos, t) {}
+  endEffect(outputPos, startPos, endPos) {
+    outputPos.copy(endPos);
+  }
+}
+
+// Immediately jump to the destination with no transition
+const XRLocomotionEffectSnap = XRLocomotionEffect;
+
+// Quickly slide to the new location.
+export class XRLocomotionEffectSlide extends XRLocomotionEffect {
+  // It it's HIGHLY recommended that you don't set the duration to more than,
+  // say, 0.25. Some users are highly sensitive to camera motion in VR, and the
+  // longer this effect takes the more it's likely to bother them.
+  constructor(duration = 0.1) {
+    super();
+    this.duration = duration;
+  }
+
+  updateEffect(outputPos, startPos, endPos, t) {
+    outputPos.lerpVectors(startPos, endPos, t);
+  }
+}
+
+// Fade the scene out, jump to the new location, and fade the scene back in.
+// This is probably the most comfortable for the largest number of users.
+export class XRLocomotionEffectFade extends XRLocomotionEffect {
+  constructor(duration = 0.5) {
+    super();
+    this.duration = duration;
+    this.moved = false;
+
+    this.fadeMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        opacity: { value: 0.0 },
+      },
+
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+
+      vertexShader: `
+        void main() {
+          gl_Position = vec4(position.xy, 0.0, 1.0);
+        }`,
+      fragmentShader: `
+        uniform float opacity;
+        void main() {
+          gl_FragColor = vec4(0, 0, 0, opacity);
+        }`
+    });
+    // When you absolutely, positively MUST be rendered dead last.
+    this.fadeMaterial.renderOrder = Number.MAX_SAFE_INTEGER;
+
+    this.fadeMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2, 1, 1),
+      this.fadeMaterial
+    );
+    this.fadeMesh.visible = false;
+    this.fadeMesh.frustumCulled = false;
+    this.add(this.fadeMesh);
+  }
+
+  startEffect(outputPos, startPos, endPos) {
+    this.fadeMesh.visible = true;
+    this.moved = false;
+  }
+
+  updateEffect(outputPos, startPos, endPos, t) {
+    this.fadeMaterial.uniforms.opacity.value = 1.0 - (Math.abs(t - 0.5) * 2.0);
+    if (!this.moved && t >= 0.5) {
+      outputPos.copy(endPos);
+      this.moved = true;
+    }
+  }
+
+  endEffect() {
+    this.fadeMesh.visible = true;
+    if (!this.moved) {
+      outputPos.copy(endPos);
+    }
+  }
+}
+
+export class XRLocomotionManager extends THREE.Group {
+  constructor(options = {}) {
+    super();
+
+    this.enabled = true;
 
     this.inputs = [];
     this.teleportingInput = null;
+    this.effect = options.effect ? options.effect : new XRLocomotionEffectFade();
+
+    this.transition = {
+      active: false,
+      startTime: 0,
+      startPos: new THREE.Vector3(),
+      endPos: new THREE.Vector3(),
+    };
 
     this.teleportGuide = new XRTeleportGuide(options);
     this.teleportGuide.visible = false;
@@ -33,7 +134,23 @@ export class XRLocomotionManager extends THREE.Group {
     });
   }
 
+  //onBeforeRender(renderer, scene, camera, geometry, material, group) {
   update(renderer, camera) {
+    if (!this.enabled) { return; }
+
+    // If a transition is in progress finish it before allowing further locomotion
+    if (this.transition.active) {
+      const elapsed = this.teleportGuide.clock.getElapsedTime() - this.transition.startTime;
+      if (elapsed >= this.effect.duration) {
+        this.effect.endEffect(this.position, this.transition.startPos, this.transition.endPos);
+        this.transition.active = false;
+        this.remove(this.effect);
+      } else {
+        this.effect.updateEffect(this.position, this.transition.startPos, this.transition.endPos, elapsed / this.effect.duration);
+      }
+      return;
+    }
+
     for (let input of this.inputs) {
       const gamepad = input.inputSource ? input.inputSource.gamepad : null;
       if(!gamepad) { continue; }
@@ -46,11 +163,11 @@ export class XRLocomotionManager extends THREE.Group {
       if (gamepad.buttons.length > 2 && gamepad.buttons[2].pressed) {
         if (!input.touchpadActive) {
           input.touchpadActive = true;
-          this.startTeleport(input);
+          this.startSelectDestination(input);
         }
       } else if (input.touchpadActive) {
         if (input.touchpadActive) {
-          this.endTeleport(input, renderer, camera);
+          this.endSelectDestination(input, renderer, camera);
           input.touchpadActive = false;
         }
       }
@@ -59,11 +176,11 @@ export class XRLocomotionManager extends THREE.Group {
       if (gamepad.axes.length > 3 && gamepad.axes[3] < -0.7) {
         if (!input.thumbstickActive) {
           input.thumbstickActive = true;
-          this.startTeleport(input);
+          this.startSelectDestination(input);
         }
       } else if (input.thumbstickActive) {
         if (input.thumbstickActive) {
-          this.endTeleport(input, renderer, camera);
+          this.endSelectDestination(input, renderer, camera);
           input.thumbstickActive = false;
         }
       }
@@ -74,20 +191,32 @@ export class XRLocomotionManager extends THREE.Group {
     }
   }
 
-  startTeleport(input) {
+  startSelectDestination(input) {
     this.teleportingInput = input;
     this.teleportGuide.visible = true;
   }
 
-  endTeleport(input, renderer, camera) {
+  endSelectDestination(input, renderer, camera) {
     if (!input || input != this.teleportingInput) { return; }
 
     const xrCamera = renderer.xr.getCamera(camera);
     const validDest = this.teleportGuide.getTeleportOffset(OFFSET_VEC, xrCamera, this.teleportingInput.controller);
 
     if (validDest) {
-      // Move the camera group by the given offset.
-      this.position.add(OFFSET_VEC);
+      // Transition the camera group by the given offset.
+      this.transition.startTime = this.teleportGuide.clock.getElapsedTime();
+      this.transition.startPos.copy(this.position);
+      this.transition.endPos.copy(this.position);
+      this.transition.endPos.add(OFFSET_VEC);
+
+      this.effect.startEffect(this.position, this.transition.startPos, this.transition.endPos);
+      if (this.effect.duration == 0) {
+        // Special case for zero-length transitions
+        this.effect.endEffect(this.position, this.transition.startPos, this.transition.endPos);
+      } else {
+        this.transition.active = true;
+        this.add(this.effect);
+      }
     }
 
     this.teleportingInput = null;
