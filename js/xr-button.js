@@ -38,6 +38,10 @@ export class XRButtonManager {
     this._controllers = [];
     this._frame = 0;
     this.active = true;
+
+    this.selectEventListener = (event) => {
+      this.onSelect(event.target);
+    };
   }
 
   createButton(options) {
@@ -48,9 +52,15 @@ export class XRButtonManager {
 
   addController(controller) {
     this._controllers.push(controller);
-    controller.addEventListener('select', (event) => {
-      this.onSelect(event.target);
-    } )
+    controller.addEventListener('select', this.selectEventListener);
+  }
+
+  removeController(controller) {
+    const index = this._controllers.indexOf(controller);
+    if (index > -1) {
+      this._controllers.splice(index, 1);
+      controller.removeEventListener('select', this.selectEventListener);
+    }
   }
 
   onSelect(controller) {
@@ -114,13 +124,13 @@ class XRButton extends THREE.Object3D {
       color: 0xAAFFAA,
       side: THREE.BackSide,
     });
-    
+
     this._outlineMesh = new THREE.Mesh(buttonGeometry, outlineMaterial);
     this._outlineMesh.position.copy(this._buttonMesh.position);
     this._outlineMesh.scale.multiplyScalar(1.05);
     this._outlineMesh.visible = false;
     this.add(this._outlineMesh);
-    
+
     if (options.imageUrl) {
       this._imageUrl = options.imageUrl;
       this._texture = textureLoader.load(options.imageUrl);

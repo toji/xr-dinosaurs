@@ -107,7 +107,13 @@ export class XRLocomotionManager extends THREE.Group {
 
     this.inputs = [];
     this.teleportingInput = null;
-    this.effect = options.effect ? options.effect : new XRLocomotionEffectFade();
+    this.effect = options.effect || new XRLocomotionEffectFade();
+
+    // Callbacks for apps using the manager to hook into.
+    this.startSelectDestinationCallback = options.startSelectDestinationCallback || null;
+    this.endSelectDestinationCallback = options.endSelectDestinationCallback || null;
+    this.startTransitionCallback = options.startTransitionCallback || null;
+    this.endTransitionCallback = options.endTransitionCallback || null;
 
     this.transition = {
       active: false,
@@ -142,9 +148,7 @@ export class XRLocomotionManager extends THREE.Group {
     if (this.transition.active) {
       const elapsed = this.teleportGuide.clock.getElapsedTime() - this.transition.startTime;
       if (elapsed >= this.effect.duration) {
-        this.effect.endEffect(this.position, this.transition.startPos, this.transition.endPos);
-        this.transition.active = false;
-        this.remove(this.effect);
+        this.endTransition();
       } else {
         this.effect.updateEffect(this.position, this.transition.startPos, this.transition.endPos, elapsed / this.effect.duration);
       }
@@ -192,8 +196,12 @@ export class XRLocomotionManager extends THREE.Group {
   }
 
   startSelectDestination(input) {
+    if (this.teleportingInput) { return; }
     this.teleportingInput = input;
     this.teleportGuide.visible = true;
+    if (this.startSelectDestinationCallback) {
+      this.startSelectDestinationCallback(input.controller);
+    }
   }
 
   endSelectDestination(input, renderer, camera) {
@@ -202,25 +210,42 @@ export class XRLocomotionManager extends THREE.Group {
     const xrCamera = renderer.xr.getCamera(camera);
     const validDest = this.teleportGuide.getTeleportOffset(OFFSET_VEC, xrCamera, this.teleportingInput.controller);
 
+    if (this.endSelectDestinationCallback) {
+      this.endSelectDestinationCallback(input.controller);
+    }
+
     if (validDest) {
       // Transition the camera group by the given offset.
       this.transition.startTime = this.teleportGuide.clock.getElapsedTime();
       this.transition.startPos.copy(this.position);
       this.transition.endPos.copy(this.position);
       this.transition.endPos.add(OFFSET_VEC);
+      this.transition.active = true;
+      this.add(this.effect);
+
+      if (this.startTransitionCallback) {
+        this.startTransitionCallback(this.transition.startPos, this.transition.endPos);
+      }
 
       this.effect.startEffect(this.position, this.transition.startPos, this.transition.endPos);
       if (this.effect.duration == 0) {
         // Special case for zero-length transitions
-        this.effect.endEffect(this.position, this.transition.startPos, this.transition.endPos);
-      } else {
-        this.transition.active = true;
-        this.add(this.effect);
+        this.endTransition();
       }
     }
 
     this.teleportingInput = null;
     this.teleportGuide.visible = false;
+  }
+
+  endTransition() {
+    if (!this.transition.active) { return; }
+    this.effect.endEffect(this.position, this.transition.startPos, this.transition.endPos);
+    this.remove(this.effect);
+    this.transition.active = false;
+    if (this.endTransitionCallback) {
+      this.endTransitionCallback();
+    }
   }
 }
 

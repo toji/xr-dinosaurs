@@ -24,7 +24,7 @@ import { XRButtonManager } from './xr-button.js';
 import { XRDinosaurLoader } from './dinosaurs/xr-dinosaur-loader.js';
 import { XRInputCursorManager } from './xr-input-cursor.js';
 import { XRInputRay } from './xr-input-ray.js';
-import { XRTeleportGuide, XRLocomotionManager } from './xr-teleport.js';
+import { XRLocomotionManager } from './xr-teleport.js';
 import { XRLighting } from './xr-lighting.js';
 import { XRStats } from './xr-stats.js';
 
@@ -152,18 +152,28 @@ function initControllers() {
     let grip = renderer.xr.getControllerGrip(index);
     let model = xrControllerModelFactory.createControllerModel(grip);
 
+    const rayMesh = inputRay.clone();
+    targetRay.add(rayMesh);
+    targetRay.rayMesh = rayMesh;
+
     targetRay.addEventListener('connected', (event) => {
+      console.log(`Controller connected: ${event.data.profiles}`);
       const xrInputSource = event.data;
+      grip.visible = xrInputSource !== 'gaze';
       targetRay.visible = xrInputSource !== 'gaze';
+      buttonManager.addController(targetRay);
     });
 
-    targetRay.add(inputRay.clone());
+    targetRay.addEventListener('disconnected', (event) => {
+      console.log(`Controller disconnected: ${event.data.profiles}`);
+      grip.visible = false;
+      targetRay.visible = false;
+      buttonManager.removeController(targetRay);
+    });
 
     grip.add(model);
 
-    buttonManager.addController(targetRay);
     locomotionManager.watchController(targetRay);
-
     locomotionManager.add(targetRay);
     locomotionManager.add(grip);
 
@@ -192,6 +202,14 @@ function OnAppStateChange(state) {
 function isValidDestination(dest) {
   // Does a really simple bounds check to ensure users can't teleport beyond the inner fence.
   return (dest.x > -25.5 && dest.x < 26 && dest.z > -35 && dest.z < 16.5);
+}
+
+function onStartSelectDestination(controller) {
+  controller.rayMesh.visible = false;
+}
+
+function onEndSelectDestination(controller) {
+  controller.rayMesh.visible = true;
 }
 
 export function PreloadDinosaurApp(debug = false) {
@@ -228,7 +246,9 @@ export function PreloadDinosaurApp(debug = false) {
 
   locomotionManager = new XRLocomotionManager({
     targetTexture: new textureLoader.load('media/textures/teleport-target.png'),
-    validDestinationCallback: isValidDestination
+    validDestinationCallback: isValidDestination,
+    startSelectDestinationCallback: onStartSelectDestination,
+    endSelectDestinationCallback: onEndSelectDestination,
   });
   environment.platform.add(locomotionManager);
 
