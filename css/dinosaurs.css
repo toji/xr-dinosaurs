@@ -132,6 +132,10 @@ li[data-dinosaur="brachiosaurus"]:before {
   background-position: -128px 0;
 }
 
+li[data-dinosaur="dilophosaurus"]:before {
+  background-position: 0px -384px;
+}
+
 li[data-dinosaur="raptor"]:before {
   background-position: -384px -128px;
 }
@@ -146,6 +150,10 @@ li[data-dinosaur="parasaurolophus"]:before {
 
 li[data-dinosaur="pachycephalosaurus"]:before {
   background-position: -256px 0;
+}
+
+li[data-dinosaur="spinosaurus"]:before {
+  background-position: -128px -384px;
 }
 
 li[data-dinosaur="stegosaurus"]:before {

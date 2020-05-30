@@ -113,6 +113,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           worry, she's very friendly and we've taught her to be <i>extremely</i> careful about
           where she's stepping!</p>
         </li>
+        <li data-dinosaur='dilophosaurus'>
+          Dilophosaurus
+          <p>Our Dilophosaurus is fully aware that her frill is "scientifically inaccurate"
+          and would like to point out that it makes her look fabulous anyway! She does,
+          however, find spitting of any sort to be extremely rude.</p>
+        </li>
         <li data-dinosaur='pachycephalosaurus'>
           Pachycephalosaurus
           <p>This sweet "Pachy" is one of our older dinosaurs. She's a bit shy and
@@ -128,6 +134,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           <p>You've probably heard these smart dinosaurs called "Velociraptors", but
           those were actually quite small. Our Utahraptor is much closer in size to
           the dinosaurs you know and love from the big screen.</p>
+        </li>
+        <li data-dinosaur='spinosaurus'>
+          Spinosaurus
+          <p>A big carnivore with a big sail, our Spinosaurus prefers to spend her
+          time hanging out in her swampy pool, but is happy to come out to say
+          hello to our park visitors.</p>
         </li>
         <li data-dinosaur='stegosaurus'>
           Stegosaurus
@@ -338,7 +350,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       viewARButton.addEventListener('click', () => {
         if (!arSupported) return;
-        
+
         appState.screen = SCREEN.Select;
         appState.viewMode = VIEW_MODE.AR;
         updateAppState();

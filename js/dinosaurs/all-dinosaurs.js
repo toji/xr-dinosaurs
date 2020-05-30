@@ -67,6 +67,30 @@ export class Brachiosaurus extends XRDinosaur {
   }
 }
 
+export class Dilophosaurus extends XRDinosaur {
+  constructor() {
+    super();
+
+    this.path = 'media/models/dilophosaurus/';
+    this.file = 'scene.gltf';
+    this.buttonAtlasOffset = [0.0, 0.75];
+
+    /*this.shadowNodeNames = [
+      'Brachiosaurus_L_Toe01_032',
+      'Brachiosaurus_R_Toe01_037',
+      'Brachiosaurus_L_Finger0_010',
+      'Brachiosaurus_R_Finger0_015'
+    ];*/
+    this.shadowSize = 1.5;
+
+    this.animationSequence = ['Idle', 'Look_Side', 'Idle', 'Look_Back'];
+
+    this.height = 1.9;
+    this.position.set(0, 0, -4);
+    this.rotation.y = Math.PI * -0.2;
+  }
+}
+
 export class Pachycephalosaurus extends XRDinosaur {
   constructor() {
     super();
@@ -127,6 +151,31 @@ export class Utahraptor extends XRDinosaur {
     this.position.set(-0.5, 0, -4);
   }
 }
+
+export class Spinosaurus extends XRDinosaur {
+  constructor() {
+    super();
+
+    this.path = 'media/models/spinosaurus/';
+    this.file = 'scene.gltf';
+    this.buttonAtlasOffset = [0.25, 0.75];
+
+    /*this.shadowNodeNames = [
+      'Brachiosaurus_L_Toe01_032',
+      'Brachiosaurus_R_Toe01_037',
+      'Brachiosaurus_L_Finger0_010',
+      'Brachiosaurus_R_Finger0_015'
+    ];*/
+    this.shadowSize = 2.5;
+
+    this.animationSequence = ['Idle', 'Look_Side', 'Idle', 'Look_Back'];
+
+    this.height = 5.5;
+    this.position.set(-25, 0, -43.3);
+    //this.rotation.y = Math.PI * -0.2;
+  }
+}
+
 
 export class Stegosaurus extends XRDinosaur {
   constructor() {
@@ -200,9 +249,11 @@ export class Tyrannosaurus extends XRDinosaur {
 export let AllDinosaurs = {
   ankylosaurus: new Ankylosaurus(),
   brachiosaurus: new Brachiosaurus(),
+  dilophosaurus: new Dilophosaurus(),
   pachycephalosaurus: new Pachycephalosaurus(),
   parasaurolophus: new Parasaurolophus(),
   raptor: new Utahraptor(),
+  spinosaurus: new Spinosaurus(),
   stegosaurus: new Stegosaurus(),
   triceratops: new Triceratops(),
   trex: new Tyrannosaurus(),
