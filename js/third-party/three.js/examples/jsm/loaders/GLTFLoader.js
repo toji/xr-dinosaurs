@@ -1404,7 +1404,7 @@ var GLTFLoader = ( function () {
 		this.primitiveCache = {};
 
 		var imageLoader = null;
-		if (typeof createImageBitmap !== 'unknown') {
+		if (typeof createImageBitmap !== 'undefined') {
 			imageLoader = new ImageBitmapLoader( this.options.manager );
 		}
 
