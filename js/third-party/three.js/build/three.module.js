@@ -36520,9 +36520,11 @@ CubeTextureLoader.prototype = Object.assign( Object.create( Loader.prototype ), 
  * @author mrdoob / http://mrdoob.com/
  */
 
-function TextureLoader( manager ) {
+function TextureLoader( manager, imageLoader ) {
 
 	Loader.call( this, manager );
+
+	this.imageLoader = imageLoader || new ImageLoader( manager );
 
 }
 
@@ -36534,7 +36536,7 @@ TextureLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 		var texture = new Texture();
 
-		var loader = new ImageLoader( this.manager );
+		var loader = this.imageLoader;
 		loader.setCrossOrigin( this.crossOrigin );
 		loader.setPath( this.path );
 

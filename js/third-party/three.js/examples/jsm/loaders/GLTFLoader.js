@@ -19,6 +19,7 @@ import {
 	FileLoader,
 	FrontSide,
 	Group,
+	ImageBitmapLoader,
 	InterleavedBuffer,
 	InterleavedBufferAttribute,
 	Interpolant,
@@ -755,7 +756,7 @@ var GLTFLoader = ( function () {
 		/*eslint-disable*/
 		Object.defineProperties(
 			this,
-			{	
+			{
 				specular: {
 					get: function () { return uniforms.specular.value; },
 					set: function ( v ) { uniforms.specular.value = v; }
@@ -1402,7 +1403,12 @@ var GLTFLoader = ( function () {
 		// BufferGeometry caching
 		this.primitiveCache = {};
 
-		this.textureLoader = new TextureLoader( this.options.manager );
+		var imageLoader = null;
+		if (typeof createImageBitmap !== 'unknown') {
+			imageLoader = new ImageBitmapLoader( this.options.manager );
+		}
+
+		this.textureLoader = new TextureLoader( this.options.manager, imageLoader );
 		this.textureLoader.setCrossOrigin( this.options.crossOrigin );
 
 		this.fileLoader = new FileLoader( this.options.manager );

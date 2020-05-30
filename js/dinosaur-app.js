@@ -165,7 +165,9 @@ function initControllers() {
     });
 
     targetRay.addEventListener('disconnected', (event) => {
-      console.log(`Controller disconnected: ${event.data.profiles}`);
+      if (event.data) {
+        console.log(`Controller disconnected: ${event.data.profiles}`);
+      }
       grip.visible = false;
       targetRay.visible = false;
       buttonManager.removeController(targetRay);
@@ -245,7 +247,7 @@ export function PreloadDinosaurApp(debug = false) {
   cursorManager.addCollider(buttonGroup);
 
   locomotionManager = new XRLocomotionManager({
-    targetTexture: new textureLoader.load('media/textures/teleport-target.png'),
+    targetTexture: textureLoader.load('media/textures/teleport-target.png'),
     validDestinationCallback: isValidDestination,
     startSelectDestinationCallback: onStartSelectDestination,
     endSelectDestinationCallback: onEndSelectDestination,
