@@ -72,7 +72,6 @@ export class Dilophosaurus extends XRDinosaur {
     super();
 
     this.path = 'media/models/dilophosaurus/';
-    this.file = 'scene.gltf';
     this.buttonAtlasOffset = [0.0, 0.75];
 
     this.shadowNodeNames = [
@@ -162,7 +161,6 @@ export class Spinosaurus extends XRDinosaur {
     super();
 
     this.path = 'media/models/spinosaurus/';
-    this.file = 'scene.gltf';
     this.buttonAtlasOffset = [0.25, 0.75];
 
     this.shadowNodeNames = [
