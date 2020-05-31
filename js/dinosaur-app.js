@@ -36,13 +36,13 @@ import { OrbitControls } from './third-party/three.js/examples/jsm/controls/Orbi
 import { XRControllerModelFactory } from './third-party/three.js/examples/jsm/webxr/XRControllerModelFactory.js';
 
 // VR Button Layout
-const ROW_LENGTH = 4;
+const ROW_LENGTH = 5;
 const BUTTON_SPACING = 0.25;
 const LEFT_BUTTON_X = (BUTTON_SPACING * (ROW_LENGTH - 1) * -0.5);
 
-const HORN_BUTTON_POSITION = new THREE.Vector3(0.65, 0, 0);
-const UP_BUTTON_POSITION = new THREE.Vector3(-0.65, 0, -BUTTON_SPACING * 0.5);
-const DOWN_BUTTON_POSITION = new THREE.Vector3(-0.65, 0, BUTTON_SPACING * 0.5);
+const HORN_BUTTON_POSITION = new THREE.Vector3(0.75, 0, 0);
+const UP_BUTTON_POSITION = new THREE.Vector3(-0.75, 0, -BUTTON_SPACING * 0.5);
+const DOWN_BUTTON_POSITION = new THREE.Vector3(-0.75, 0, BUTTON_SPACING * 0.5);
 
 const IDEAL_RELATIVE_BUTTON_HEIGHT = -0.6;
 const MIN_BUTTON_HEIGHT = 0.3;
@@ -553,7 +553,7 @@ function buildButtons() {
   buttonGroup.add(downButton);
 
   // "Glass" pedestal
-  let glassGeometry = new THREE.BoxBufferGeometry(1.6, 0.05, 0.5);
+  let glassGeometry = new THREE.BoxBufferGeometry(1.8, 0.05, 0.5);
   let glassMaterial = new THREE.MeshLambertMaterial({
     color: 0xAACCFF,
     transparent: true,
