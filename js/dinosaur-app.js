@@ -667,6 +667,8 @@ function render(time, xrFrame) {
     }*/
 
     buttonManager.update(delta);
+
+    locomotionManager.teleportGuide.options.groundHeight = environment.platformHeight;
   }
 
   if (controllers.length) {

@@ -457,6 +457,8 @@ export class XRTeleportGuide extends THREE.Group {
 
     // Controller start position
     const p = controller.getWorldPosition(TMP_VEC_P);
+    // Adjusted for a static ground height
+    const pGround = p.y - this.options.groundHeight;
 
     // Set Vector V to the direction of the controller, at 1m/s
     const v = controller.getWorldDirection(TMP_VEC_V);
@@ -468,7 +470,7 @@ export class XRTeleportGuide extends THREE.Group {
     v.multiplyScalar(this.options.teleportVelocity);
 
     // Time for tele ball to hit ground
-    const t = (-v.y + Math.sqrt(v.y**2 - 2*p.y*GRAVITY.y))/GRAVITY.y;
+    const t = (-v.y + Math.sqrt(v.y**2 - 2*pGround*GRAVITY.y))/GRAVITY.y;
 
     const segments = this.options.raySegments;
     const vert = TMP_VEC.set(0,0,0);
@@ -523,13 +525,14 @@ export class XRTeleportGuide extends THREE.Group {
   getTeleportOffset(outputVector, target, controller) {
     // feet position
     const feetPos = target.getWorldPosition(TMP_VEC);
-    feetPos.y = 0;
+    feetPos.y = this.options.groundHeight;
 
     // cursor position
     const p = controller.getWorldPosition(TMP_VEC_P);
+    const pGround = p.y - this.options.groundHeight;
     const v = controller.getWorldDirection(TMP_VEC_V);
     v.multiplyScalar(this.options.teleportVelocity);
-    const t = (-v.y  + Math.sqrt(v.y**2 - 2*p.y*GRAVITY.y))/GRAVITY.y;
+    const t = (-v.y  + Math.sqrt(v.y**2 - 2*pGround*GRAVITY.y))/GRAVITY.y;
     guidePositionAtT(outputVector, t, p, v, GRAVITY);
 
     const isValid = this.options.validDestinationCallback ? this.options.validDestinationCallback(outputVector) : true;

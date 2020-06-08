@@ -27,7 +27,7 @@ const PLATFORM_MOVE_INCREMENT = MAX_PLATFORM_HEIGHT / 2;
 export class PenEnvironment extends THREE.Group {
   constructor(gltfLoader) {
     super();
-  
+
     this._platform = new THREE.Group();
     this._platform.position.set(0, 0, 0);
     this.add(this._platform);
@@ -64,7 +64,7 @@ export class PenEnvironment extends THREE.Group {
           raisedPlatform.applyMatrix4(raisedPlatformTransform);
           this._platform.add(raisedPlatform);
         }
-        
+
         this.add(gltf.scene);
         resolve(this);
       });
@@ -77,6 +77,10 @@ export class PenEnvironment extends THREE.Group {
 
   get platform() {
     return this._platform;
+  }
+
+  get platformHeight() {
+    return this._platform.position.y;
   }
 
   raisePlatform() {
