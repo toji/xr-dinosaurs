@@ -293,7 +293,9 @@ const DEFAULT_GUIDE_OPTIONS = {
   dashCount: 8,
   dashSpeed: 0.2,
   teleportVelocity: 8,
-  groundHeight: 0
+  groundHeight: 0,
+  navigationMeshes: null,
+  maxFallDistance: 4, // In meters
 };
 
 const RAY_TEXTURE_DATA = new Uint8Array([
@@ -312,6 +314,8 @@ const RAY_TEXTURE_DATA = new Uint8Array([
 ]);
 
 const TMP_VEC = new THREE.Vector3();
+const TMP_VEC_2 = new THREE.Vector3();
+const TMP_VEC_D = new THREE.Vector3();
 const TMP_VEC_P = new THREE.Vector3();
 const TMP_VEC_V = new THREE.Vector3();
 const GRAVITY = new THREE.Vector3(0,-9.8,0);
@@ -327,6 +331,8 @@ export class XRTeleportGuide extends THREE.Group {
   constructor(options) {
     super();
 
+    // Only used if we have navigationMeshes
+    this.raycaster = new THREE.Raycaster();
     this.options = Object.assign({}, DEFAULT_GUIDE_OPTIONS, options);
 
     const r = this.options.rayRadius;
@@ -455,10 +461,12 @@ export class XRTeleportGuide extends THREE.Group {
   updateGuideForController(controller) {
     const r = this.options.rayRadius;
 
+    const useNavMeshes = this.options.navigationMeshes && this.options.navigationMeshes.length;
+
     // Controller start position
     const p = controller.getWorldPosition(TMP_VEC_P);
     // Adjusted for a static ground height
-    const pGround = p.y - this.options.groundHeight;
+    const pGround = p.y - (useNavMeshes ? -(this.options.maxFallDistance+0.1) : this.options.groundHeight);
 
     // Set Vector V to the direction of the controller, at 1m/s
     const v = controller.getWorldDirection(TMP_VEC_V);
@@ -470,10 +478,63 @@ export class XRTeleportGuide extends THREE.Group {
     v.multiplyScalar(this.options.teleportVelocity);
 
     // Time for tele ball to hit ground
-    const t = (-v.y + Math.sqrt(v.y**2 - 2*pGround*GRAVITY.y))/GRAVITY.y;
+    let t = (-v.y + Math.sqrt(v.y**2 - 2*pGround*GRAVITY.y))/GRAVITY.y;
+
+    const vert = TMP_VEC.set(0,0,0);
+    const vert2 = TMP_VEC_2.set(0,0,0);
+    const dir = TMP_VEC_D.set(0,0,-1);
+
+    // If we're using nav meshes do a coarser trace of the teleport path and
+    // raycast against the nave meshes at each step. If we collide with any
+    // nav mesh geometry we'll terminate the guide at that point.
+    if (useNavMeshes) {
+      const traceSegments = this.options.raySegments / 2;
+
+      guidePositionAtT(vert, 0, p, v, GRAVITY);
+      this.worldToLocal(vert);
+
+      const segmentT = t/traceSegments;
+
+      for (let i = 1; i <= traceSegments; i++) {
+        guidePositionAtT(vert2, i*segmentT, p, v, GRAVITY);
+        this.worldToLocal(vert2);
+
+        // Sketchy Optimization?: Don't do any raycasts until the guide starts
+        // travelling downward. May not be appropriate for all environments?
+        if (vert2.y > vert.y) {
+          continue;
+        }
+
+        // Get the direction between the two vectors
+        dir.subVectors(vert2, vert);
+        const segmentLength = dir.length();
+        dir.normalize();
+
+        this.raycaster.set(vert, dir);
+        this.raycaster.far = segmentLength;
+        this.intersections = this.raycaster.intersectObjects(this.options.navigationMeshes, true);
+
+        // Did we intersect with anything?
+        if (this.intersections.length) {
+          // We only care about the closests intersection point
+          const intersection = this.intersections[0];
+          // Did we intersect between the segment points?
+          if (intersection.distance <= segmentLength) {
+            // If we did, adjust "t" to terminate at that point, then let the
+            // rest of the algorithm do it's thing!
+            t = ((i-1)*segmentT) + (segmentT * (intersection.distance/segmentLength));
+
+            break;
+
+            // TODO: Check intersection normal. Don't teleport to vertical surfaces
+          }
+        }
+
+        vert.copy(vert2);
+      }
+    }
 
     const segments = this.options.raySegments;
-    const vert = TMP_VEC.set(0,0,0);
     let guidePositions = [];
     for (let i = 0; i <= segments; i++) {
         // Set vertex to current position of the virtual ball at time t
@@ -496,7 +557,11 @@ export class XRTeleportGuide extends THREE.Group {
 
     // Check to see if our destination point is valid
     guidePositionAtT(vert, t, p, v, GRAVITY);
-    const isValid = this.options.validDestinationCallback ? this.options.validDestinationCallback(vert) : true;
+    let isValid = p.y - vert.y < this.options.maxFallDistance;
+
+    if (isValid && this.options.validDestinationCallback) {
+      isValid = this.options.validDestinationCallback(vert);
+    }
 
     if (isValid) {
       // Place the target mesh near the end of the guide

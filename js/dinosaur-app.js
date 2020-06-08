@@ -251,6 +251,7 @@ export function PreloadDinosaurApp(debug = false) {
     validDestinationCallback: isValidDestination,
     startSelectDestinationCallback: onStartSelectDestination,
     endSelectDestinationCallback: onEndSelectDestination,
+    navigationMeshes: environment.navigationMeshes
   });
   environment.platform.add(locomotionManager);
 
