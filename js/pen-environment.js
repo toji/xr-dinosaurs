@@ -32,6 +32,8 @@ export class PenEnvironment extends THREE.Group {
     this._platform.position.set(0, 0, 0);
     this.add(this._platform);
 
+    this._navigationMeshes = [];
+
     this._platformTargetHeight = 0;
 
     this._loadedPromise = new Promise((resolve) => {
@@ -55,6 +57,10 @@ export class PenEnvironment extends THREE.Group {
           }
           if (child.name == 'Raised_Platform') {
             raisedPlatform = child;
+            this._navigationMeshes.push(child);
+          }
+          if (child.name == 'Ground') {
+            this._navigationMeshes.push(child);
           }
         });
 
@@ -77,6 +83,10 @@ export class PenEnvironment extends THREE.Group {
 
   get platform() {
     return this._platform;
+  }
+
+  get navigationMeshes() {
+    return this._navigationMeshes;
   }
 
   get platformHeight() {
