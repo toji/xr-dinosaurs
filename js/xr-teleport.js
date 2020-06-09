@@ -434,19 +434,7 @@ export class XRTeleportGuide extends THREE.Group {
     this.guidelineMesh = new THREE.Mesh(geometry, material);
     this.add(this.guidelineMesh);
 
-    if (this.options.targetTexture) {
-      this.targetMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.75, 0.75, 1, 1),
-        new THREE.MeshBasicMaterial({
-            map: this.options.targetTexture,
-            blending: THREE.AdditiveBlending,
-            transparent: true,
-            depthWrite: false,
-        })
-      );
-    } else {
-      this.targetMesh = new XRDefaultTeleportTarget(this.options.color);
-    }
+    this.targetMesh = new XRTeleportTarget(this.options);
 
     this.targetMesh.rotation.x = -Math.PI * 0.5;
     this.add(this.targetMesh);
@@ -561,8 +549,8 @@ export class XRTeleportGuide extends THREE.Group {
     }
 
     if (isValid) {
-      // Place the target mesh near the end of the guide
-      guidePositionAtT(this.targetMesh.position, t*0.98, p, v, GRAVITY);
+      // Place the target mesh at the end of the guide
+      guidePositionAtT(this.targetMesh.position, t, p, v, GRAVITY);
       this.worldToLocal(this.targetMesh.position);
 
       // Update the timer for the scrolling dashes
@@ -618,8 +606,44 @@ const TARGET_INNER_LUMINANCE = 0.0;
 const TARGET_SEGMENTS = 16;
 
 // Creates a simple circular teleport target mesh to use when no texture is supplied
-class XRDefaultTeleportTarget extends THREE.Mesh {
-  constructor(color) {
+class XRTeleportTarget extends THREE.Group {
+  constructor(options) {
+    super();
+
+    // If a target texture was provided then create a simple textured quad
+    if (options.targetTexture) {
+      const targetMeshGeometry = new THREE.PlaneGeometry(0.75, 0.75, 1, 1);
+      this.add(new THREE.Mesh(
+        targetMeshGeometry,
+        new THREE.MeshBasicMaterial({
+            map: options.targetTexture,
+            blending: THREE.AdditiveBlending,
+            transparent: true,
+            depthWrite: false,
+        })
+      ));
+      this.add(new THREE.Mesh(
+        targetMeshGeometry,
+        new THREE.MeshBasicMaterial({
+            map: options.targetTexture,
+            blending: THREE.AdditiveBlending,
+            transparent: true,
+            depthWrite: false,
+
+            // These two properties together allow a faded version of the target
+            // to be rendered behind any geometry that obscures it, so that the
+            // target is always fully visible but it's clear when it's behind
+            // any world geometry
+            opacity: 0.2,
+            depthFunc: THREE.GreaterDepth
+        })
+      ));
+
+      return;
+    }
+
+    // Otherwise create a custom target mesh so that we're not relying on an
+    // external texture.
     let targetVerts = [];
     let targetIndices = [];
 
@@ -650,32 +674,49 @@ class XRDefaultTeleportTarget extends THREE.Mesh {
     geometry.setIndex(targetIndices);
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(targetVerts), 3));
 
-    let material = new THREE.ShaderMaterial({
+    const vertexShader = `
+      attribute float opacity;
+      varying float vLuminance;
+
+      void main() {
+        vLuminance = position.z;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position.xy, 0.0, 1.0);
+      }`;
+
+    const fragmentShader = `
+      uniform vec3 cursorColor;
+      uniform float opacity;
+      varying float vLuminance;
+
+      void main() {
+        gl_FragColor = vec4(cursorColor * vLuminance, opacity);
+      }`;
+
+    this.add(new THREE.Mesh(geometry, new THREE.ShaderMaterial({
       uniforms: {
-        cursorColor: { value: color },
+        cursorColor: { value: options.color },
+        opacity: { value: 1.0 }
       },
+      vertexShader,
+      fragmentShader,
 
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
+    })));
 
-      vertexShader: `
-        attribute float opacity;
-        varying float vLuminance;
+    this.add(new THREE.Mesh(geometry, new THREE.ShaderMaterial({
+      uniforms: {
+        cursorColor: { value: options.color },
+        opacity: { value: 0.2 }
+      },
+      vertexShader,
+      fragmentShader,
 
-        void main() {
-          vLuminance = position.z;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position.xy, 0.0, 1.0);
-        }`,
-      fragmentShader: `
-        uniform vec3 cursorColor;
-        varying float vLuminance;
-
-        void main() {
-          gl_FragColor = vec4(cursorColor * vLuminance, 1.0);
-        }`
-    });
-
-    super(geometry, material);
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+      depthFunc: THREE.GreaterDepth
+    })));
   }
 }
