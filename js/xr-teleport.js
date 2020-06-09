@@ -238,7 +238,7 @@ export class XRLocomotionManager extends THREE.Group {
     if (!input || input != this.teleportingInput) { return; }
 
     const xrCamera = renderer.xr.getCamera(camera);
-    const validDest = this.teleportGuide.getTeleportOffset(OFFSET_VEC, xrCamera, this.teleportingInput.controller);
+    const validDest = this.teleportGuide.getTeleportOffset(OFFSET_VEC, xrCamera);
 
     if (this.endSelectDestinationCallback) {
       this.endSelectDestinationCallback(input.controller);
@@ -443,6 +443,7 @@ export class XRTeleportGuide extends THREE.Group {
 
     this.uniforms = material.uniforms;
     this.wasValid = true;
+    this.lastTargetPoint = new THREE.Vector3();
   }
 
   // Updates the rendered guideline to match the given controller
@@ -486,9 +487,9 @@ export class XRTeleportGuide extends THREE.Group {
 
         // Sketchy Optimization?: Don't do any raycasts until the guide starts
         // travelling downward. May not be appropriate for all environments?
-        if (vert2.y > vert.y) {
+        /*if (vert2.y > vert.y) {
           continue;
-        }
+        }*/
 
         // Get the direction between the two vectors
         dir.subVectors(vert2, vert);
@@ -541,16 +542,21 @@ export class XRTeleportGuide extends THREE.Group {
     geometry.computeBoundingSphere();
 
     // Check to see if our destination point is valid
-    guidePositionAtT(vert, t, p, v, GRAVITY);
-    let isValid = p.y - vert.y < this.options.maxFallDistance;
+    guidePositionAtT(this.lastTargetPoint, t, p, v, GRAVITY);
+
+    // If the teleport point is too far below us, don't allow it. (Let's just
+    // pretend we're preventing the user from falling and hurting themselves.)
+    // TODO: This should be computed from your current feet position (floor),
+    // not the controller position.
+    let isValid = p.y - this.lastTargetPoint.y < this.options.maxFallDistance;
 
     if (isValid && this.options.validDestinationCallback) {
-      isValid = this.options.validDestinationCallback(vert);
+      isValid = this.options.validDestinationCallback(this.lastTargetPoint);
     }
 
     if (isValid) {
       // Place the target mesh at the end of the guide
-      guidePositionAtT(this.targetMesh.position, t, p, v, GRAVITY);
+      this.targetMesh.position.copy(this.lastTargetPoint);
       this.worldToLocal(this.targetMesh.position);
 
       // Update the timer for the scrolling dashes
@@ -572,26 +578,30 @@ export class XRTeleportGuide extends THREE.Group {
 
   // Get's the offset from the target's current location to the teleport destination
   // Returns true if that destination is a valid one to teleport to.
-  getTeleportOffset(outputVector, target, controller) {
+  getTeleportOffset(outputVector, target) {
+    const useNavMeshes = this.options.navigationMeshes && this.options.navigationMeshes.length;
+
     // feet position
     const feetPos = target.getWorldPosition(TMP_VEC);
-    feetPos.y = this.options.groundHeight;
 
-    // cursor position
-    const p = controller.getWorldPosition(TMP_VEC_P);
-    const pGround = p.y - this.options.groundHeight;
-    const v = controller.getWorldDirection(TMP_VEC_V);
-    v.multiplyScalar(this.options.teleportVelocity);
-    const t = (-v.y  + Math.sqrt(v.y**2 - 2*pGround*GRAVITY.y))/GRAVITY.y;
-    guidePositionAtT(outputVector, t, p, v, GRAVITY);
-
-    const isValid = this.options.validDestinationCallback ? this.options.validDestinationCallback(outputVector) : true;
+    // If we're using a static ground height then just move around that plane.
+    let groundHeight = this.options.groundHeight;
+    // Otherwise, if we're using navigation meshes, then get WebXR's idea of
+    // where the user's head is relative to their physical floor and use that
+    // to compute the ground height
+    if (useNavMeshes) {
+      // TODO: Can this just be the locomotion group Y position?
+      const localHead = TMP_VEC_2.copy(feetPos);
+      this.worldToLocal(localHead);
+      groundHeight = feetPos.y - localHead.y;
+    }
+    feetPos.y = groundHeight;
 
     // Get the offset
-    outputVector.sub(feetPos);
+    outputVector.subVectors(this.lastTargetPoint, feetPos);
 
     // Return whether or not this is a valid teleport location
-    return isValid;
+    return this.wasValid;
   }
 }
 
@@ -618,6 +628,7 @@ class XRTeleportTarget extends THREE.Group {
         new THREE.MeshBasicMaterial({
             map: options.targetTexture,
             blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
             transparent: true,
             depthWrite: false,
         })
@@ -627,6 +638,7 @@ class XRTeleportTarget extends THREE.Group {
         new THREE.MeshBasicMaterial({
             map: options.targetTexture,
             blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
             transparent: true,
             depthWrite: false,
 
@@ -701,6 +713,7 @@ class XRTeleportTarget extends THREE.Group {
       fragmentShader,
 
       blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
       transparent: true,
       depthWrite: false,
     })));
@@ -714,6 +727,7 @@ class XRTeleportTarget extends THREE.Group {
       fragmentShader,
 
       blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
       transparent: true,
       depthWrite: false,
       depthFunc: THREE.GreaterDepth
