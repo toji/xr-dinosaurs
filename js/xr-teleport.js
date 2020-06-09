@@ -489,15 +489,12 @@ export class XRTeleportGuide extends THREE.Group {
     // nav mesh geometry we'll terminate the guide at that point.
     if (useNavMeshes) {
       const traceSegments = this.options.raySegments / 2;
+      const segmentT = t/traceSegments;
 
       guidePositionAtT(vert, 0, p, v, GRAVITY);
-      this.worldToLocal(vert);
-
-      const segmentT = t/traceSegments;
 
       for (let i = 1; i <= traceSegments; i++) {
         guidePositionAtT(vert2, i*segmentT, p, v, GRAVITY);
-        this.worldToLocal(vert2);
 
         // Sketchy Optimization?: Don't do any raycasts until the guide starts
         // travelling downward. May not be appropriate for all environments?
