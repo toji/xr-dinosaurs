@@ -319,6 +319,7 @@ const TMP_VEC_D = new THREE.Vector3();
 const TMP_VEC_P = new THREE.Vector3();
 const TMP_VEC_V = new THREE.Vector3();
 const GRAVITY = new THREE.Vector3(0,-9.8,0);
+const UP_VEC = new THREE.Vector3(0, 1, 0);
 
 function guidePositionAtT(inVec,t,p,v,g) {
   inVec.copy(p);
@@ -473,6 +474,8 @@ export class XRTeleportGuide extends THREE.Group {
     const vert2 = TMP_VEC_2.set(0,0,0);
     const dir = TMP_VEC_D.set(0,0,-1);
 
+    let isValid = false;
+
     // If we're using nav meshes do a coarser trace of the teleport path and
     // raycast against the nave meshes at each step. If we collide with any
     // nav mesh geometry we'll terminate the guide at that point.
@@ -484,12 +487,6 @@ export class XRTeleportGuide extends THREE.Group {
 
       for (let i = 1; i <= traceSegments; i++) {
         guidePositionAtT(vert2, i*segmentT, p, v, GRAVITY);
-
-        // Sketchy Optimization?: Don't do any raycasts until the guide starts
-        // travelling downward. May not be appropriate for all environments?
-        /*if (vert2.y > vert.y) {
-          continue;
-        }*/
 
         // Get the direction between the two vectors
         dir.subVectors(vert2, vert);
@@ -506,18 +503,29 @@ export class XRTeleportGuide extends THREE.Group {
           const intersection = this.intersections[0];
           // Did we intersect between the segment points?
           if (intersection.distance <= segmentLength) {
-            // If we did, adjust "t" to terminate at that point, then let the
-            // rest of the algorithm do it's thing!
+            // Only consider it a valid teleport destination if the normal of the intersection point
+            // is at least a tiny bit horizontal and facing upward.
+            vert.copy(intersection.face.normal);
+            vert.transformDirection(intersection.object.matrixWorld);
+            if (vert.dot(UP_VEC) > 0.1) { // TODO: Figure out a better fudge factor
+              isValid = true;
+            }
+
+            // Regardless of whether or not the intersection was considered valid, we should break
+            // at this point, otherwise we'll end up with situations where we try to teleport
+            // through walls or similarly silly things.
+
+            // Adjust "t" to terminate at the intersection point, then let the rest of the algorithm
+            // do it's thing!
             t = ((i-1)*segmentT) + (segmentT * (intersection.distance/segmentLength));
-
             break;
-
-            // TODO: Check intersection normal. Don't teleport to vertical surfaces
           }
         }
 
         vert.copy(vert2);
       }
+    } else {
+      isValid = true;
     }
 
     const segments = this.options.raySegments;
@@ -548,7 +556,9 @@ export class XRTeleportGuide extends THREE.Group {
     // pretend we're preventing the user from falling and hurting themselves.)
     // TODO: This should be computed from your current feet position (floor),
     // not the controller position.
-    let isValid = p.y - this.lastTargetPoint.y < this.options.maxFallDistance;
+    if (isValid) {
+      isValid = p.y - this.lastTargetPoint.y < this.options.maxFallDistance;
+    }
 
     if (isValid && this.options.validDestinationCallback) {
       isValid = this.options.validDestinationCallback(this.lastTargetPoint);
