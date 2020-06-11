@@ -316,16 +316,31 @@ const RAY_TEXTURE_DATA = new Uint8Array([
 const TMP_VEC = new THREE.Vector3();
 const TMP_VEC_2 = new THREE.Vector3();
 const TMP_VEC_D = new THREE.Vector3();
-const TMP_VEC_P = new THREE.Vector3();
-const TMP_VEC_V = new THREE.Vector3();
-const GRAVITY = new THREE.Vector3(0,-9.8,0);
 const UP_VEC = new THREE.Vector3(0, 1, 0);
 
-function guidePositionAtT(inVec,t,p,v,g) {
-  inVec.copy(p);
-  inVec.addScaledVector(v,t);
-  inVec.addScaledVector(g,0.5*t**2);
-  return inVec;
+class TeleportGuideCurve extends THREE.Curve {
+	constructor() {
+    super();
+
+    this.origin = new THREE.Vector3();
+    this.velocity = new THREE.Vector3(0, 0, -1);
+    this.gravity = new THREE.Vector3(0, -9.8, 0);
+    this.time = 0;
+  }
+
+  guidePointAtTime(outVec, time) {
+    outVec.copy(this.origin);
+    outVec.addScaledVector(this.velocity, time);
+    outVec.addScaledVector(this.gravity, 0.5*time**2);
+    return outVec;
+  }
+
+  getPoint(t, outVec) {
+    if (!outVec) {
+      outVec = new THREE.Vector3();
+    }
+    return this.guidePointAtTime(outVec, this.time * t);
+  }
 }
 
 export class XRTeleportGuide extends THREE.Group {
@@ -335,6 +350,7 @@ export class XRTeleportGuide extends THREE.Group {
     // Only used if we have navigationMeshes
     this.raycaster = new THREE.Raycaster();
     this.options = Object.assign({}, DEFAULT_GUIDE_OPTIONS, options);
+    this.guideCurve = new TeleportGuideCurve();
 
     const r = this.options.rayRadius;
 
@@ -454,12 +470,12 @@ export class XRTeleportGuide extends THREE.Group {
     const useNavMeshes = this.options.navigationMeshes && this.options.navigationMeshes.length;
 
     // Controller start position
-    const p = controller.getWorldPosition(TMP_VEC_P);
+    const p = controller.getWorldPosition(this.guideCurve.origin);
     // Adjusted for a static ground height
     const pGround = p.y - (useNavMeshes ? -(this.options.maxFallDistance+0.1) : this.options.groundHeight);
 
-    // Set Vector V to the direction of the controller, at 1m/s
-    const v = controller.getWorldDirection(TMP_VEC_V);
+    // Set guide velocity to the direction of the controller, at 1m/s
+    const v = controller.getWorldDirection(this.guideCurve.velocity);
 
     // Rotate the target texture to always be oriented the same way as the guide beam.
     this.targetMesh.rotation.z = Math.atan2(v.x, v.z);
@@ -467,8 +483,10 @@ export class XRTeleportGuide extends THREE.Group {
     // Scale the initial velocity
     v.multiplyScalar(this.options.teleportVelocity);
 
+    const g = this.guideCurve.gravity;
+
     // Time for tele ball to hit ground
-    let t = (-v.y + Math.sqrt(v.y**2 - 2*pGround*GRAVITY.y))/GRAVITY.y;
+    let t = (-v.y + Math.sqrt(v.y**2 - 2*pGround*g.y))/g.y;
 
     const vert = TMP_VEC.set(0,0,0);
     const vert2 = TMP_VEC_2.set(0,0,0);
@@ -483,10 +501,10 @@ export class XRTeleportGuide extends THREE.Group {
       const traceSegments = this.options.raySegments / 2;
       const segmentT = t/traceSegments;
 
-      guidePositionAtT(vert, 0, p, v, GRAVITY);
+      this.guideCurve.guidePointAtTime(vert, 0);
 
       for (let i = 1; i <= traceSegments; i++) {
-        guidePositionAtT(vert2, i*segmentT, p, v, GRAVITY);
+        this.guideCurve.guidePointAtTime(vert2, i*segmentT);
 
         // Get the direction between the two vectors
         dir.subVectors(vert2, vert);
@@ -528,20 +546,31 @@ export class XRTeleportGuide extends THREE.Group {
       isValid = true;
     }
 
+    this.guideCurve.time = t;
+
     const segments = this.options.raySegments;
+
+    const frames = this.guideCurve.computeFrenetFrames(segments, false);
+
+    // TODO: Could avoid an array allocation here by updating geometry.attributes.position.array
+    // directly.
     let guidePositions = [];
     for (let i = 0; i <= segments; i++) {
-        // Set vertex to current position of the virtual ball at time t
-        guidePositionAtT(vert, i*t/segments, p, v, GRAVITY);
-        this.worldToLocal(vert);
+      // Set vertex to current position of the virtual ball at time t
+      this.guideCurve.guidePointAtTime(vert, i*t/segments);
+      this.worldToLocal(vert);
 
-        // TODO: The cross section here is wrong, and will get "squished" as the
-        // guide becomes more vertical or the user turns.
-        guidePositions.push(
-          vert.x, vert.y + r, vert.z,
-          vert.x, vert.y - r, vert.z,
-          vert.x + r, vert.y, vert.z,
-          vert.x - r, vert.y, vert.z);
+      // Get the normal and binormal of the point. This is so the cross sections
+      // don't get "squished" as you rotate the guideline around.
+      const n = frames.normals[ i ];
+      const b = frames.binormals[ i ];
+
+      guidePositions.push(
+        vert.x + r*n.x, vert.y + r*n.y, vert.z + r*n.z,
+        vert.x - r*n.x, vert.y - r*n.y, vert.z - r*n.z,
+
+        vert.x + r*b.x, vert.y + r*b.y, vert.z + r*b.z,
+        vert.x - r*b.x, vert.y - r*b.y, vert.z - r*b.z);
     }
 
     const geometry = this.guidelineMesh.geometry;
@@ -550,7 +579,7 @@ export class XRTeleportGuide extends THREE.Group {
     geometry.computeBoundingSphere();
 
     // Check to see if our destination point is valid
-    guidePositionAtT(this.lastTargetPoint, t, p, v, GRAVITY);
+    this.guideCurve.guidePointAtTime(this.lastTargetPoint, t);
 
     // If the teleport point is too far below us, don't allow it. (Let's just
     // pretend we're preventing the user from falling and hurting themselves.)
