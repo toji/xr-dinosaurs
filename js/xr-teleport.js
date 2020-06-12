@@ -56,15 +56,10 @@ export class XRLocomotionEffectFade extends XRLocomotionEffect {
       depthWrite: false,
       depthTest: false,
 
-      vertexShader: `
-        void main() {
-          gl_Position = vec4(position.xy, 0.0, 1.0);
-        }`,
+      vertexShader: `void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }`,
       fragmentShader: `
         uniform float opacity;
-        void main() {
-          gl_FragColor = vec4(0, 0, 0, opacity);
-        }`
+        void main() { gl_FragColor = vec4(0, 0, 0, opacity); }`
     });
     // When you absolutely, positively MUST be rendered dead last.
     this.fadeMaterial.renderOrder = Number.MAX_SAFE_INTEGER;
@@ -354,43 +349,24 @@ export class XRTeleportGuide extends THREE.Group {
 
     const r = this.options.rayRadius;
 
-    let guidePositions = [];
+    // Positions will have to be recomputed every frame, so we're really just
+    // creating space for it here. The rest of the mesh will stay constant.
+    const positionCount = (this.options.raySegments + 1) * 12;
+
     let guideUVs = [];
     let guideIndices = [];
 
     // The guideline is a cross-chaped beam, rendered with a 1D texture fade
     // and additive blending so that it displays well in almost any situation.
+    guideUVs.push(
+      0.0, 1.0,  1.0, 1.0,
+      0.0, 1.0,  1.0, 1.0);
 
-    // Positions will have to be recomputed every frame, so we're really just
-    // filling in dummy values here. The rest of the mesh will stay constant.
     for (let i = 0; i < this.options.raySegments; ++i) {
-      if (i == 0) {
-        guidePositions.push(
-          0, r, 0,
-          0, -r, 0,
-          r, 0, 0,
-          -r, 0, 0);
-
-        guideUVs.push(
-          0.0, 1.0,
-          1.0, 1.0,
-          0.0, 1.0,
-          1.0, 1.0);
-      }
-
-      const t1 = (i+1) / this.options.raySegments;
-
-      guidePositions.push(
-        0, r, -t1,
-        0, -r, -t1,
-        r, 0, -t1,
-        -r, 0, -t1);
-
+      const t1 = 1.0 - ((i+1) / this.options.raySegments);
       guideUVs.push(
-        0.0, 1.0 - t1,
-        1.0, 1.0 - t1,
-        0.0, 1.0 - t1,
-        1.0, 1.0 - t1);
+        0.0, t1,  1.0, t1,
+        0.0, t1,  1.0, t1);
 
       const o = i * 4; // index offset
       guideIndices.push(
@@ -401,7 +377,7 @@ export class XRTeleportGuide extends THREE.Group {
 
     const geometry = new THREE.BufferGeometry();
     geometry.setIndex(guideIndices);
-    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(guidePositions), 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positionCount), 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(guideUVs), 2));
 
     let dashFactor = 2.0 * Math.PI * this.options.dashCount;
@@ -463,101 +439,72 @@ export class XRTeleportGuide extends THREE.Group {
     this.lastTargetPoint = new THREE.Vector3();
   }
 
-  // Updates the rendered guideline to match the given controller
-  updateGuideForController(controller) {
-    const r = this.options.rayRadius;
-
-    const useNavMeshes = this.options.navigationMeshes && this.options.navigationMeshes.length;
-
-    // Controller start position
-    const p = controller.getWorldPosition(this.guideCurve.origin);
-    // Adjusted for a static ground height
-    const pGround = p.y - (useNavMeshes ? -(this.options.maxFallDistance+0.1) : this.options.groundHeight);
-
-    // Set guide velocity to the direction of the controller, at 1m/s
-    const v = controller.getWorldDirection(this.guideCurve.velocity);
-
-    // Rotate the target texture to always be oriented the same way as the guide beam.
-    this.targetMesh.rotation.z = Math.atan2(v.x, v.z);
-
-    // Scale the initial velocity
-    v.multiplyScalar(this.options.teleportVelocity);
-
-    const g = this.guideCurve.gravity;
-
-    // Time for tele ball to hit ground
-    let t = (-v.y + Math.sqrt(v.y**2 - 2*pGround*g.y))/g.y;
+  clipCurveToNavigationMesh() {
+    // If we're using nav meshes do a coarser trace of the teleport path and
+    // raycast against the nave meshes at each step. If we collide with any
+    // nav mesh geometry we'll terminate the guide at that point.
+    const traceSegments = this.options.raySegments / 2;
+    const segmentT = this.guideCurve.time/traceSegments;
 
     const vert = TMP_VEC.set(0,0,0);
     const vert2 = TMP_VEC_2.set(0,0,0);
     const dir = TMP_VEC_D.set(0,0,-1);
 
-    let isValid = false;
+    this.guideCurve.guidePointAtTime(vert, 0);
 
-    // If we're using nav meshes do a coarser trace of the teleport path and
-    // raycast against the nave meshes at each step. If we collide with any
-    // nav mesh geometry we'll terminate the guide at that point.
-    if (useNavMeshes) {
-      const traceSegments = this.options.raySegments / 2;
-      const segmentT = t/traceSegments;
+    for (let i = 1; i <= traceSegments; i++) {
+      this.guideCurve.guidePointAtTime(vert2, i*segmentT);
 
-      this.guideCurve.guidePointAtTime(vert, 0);
+      // Get the direction between the two vectors
+      dir.subVectors(vert2, vert);
+      const segmentLength = dir.length();
+      dir.normalize();
 
-      for (let i = 1; i <= traceSegments; i++) {
-        this.guideCurve.guidePointAtTime(vert2, i*segmentT);
+      this.raycaster.set(vert, dir);
+      this.raycaster.far = segmentLength;
+      this.intersections = this.raycaster.intersectObjects(this.options.navigationMeshes, true);
 
-        // Get the direction between the two vectors
-        dir.subVectors(vert2, vert);
-        const segmentLength = dir.length();
-        dir.normalize();
+      // Did we intersect with anything?
+      if (this.intersections.length) {
+        // We only care about the closests intersection point
+        const intersection = this.intersections[0];
+        // Did we intersect between the segment points?
+        if (intersection.distance <= segmentLength) {
+          // Regardless of whether or not the intersection is valid, we should break
+          // at this point, otherwise we'll end up with situations where we try to teleport
+          // through walls or similarly silly things.
 
-        this.raycaster.set(vert, dir);
-        this.raycaster.far = segmentLength;
-        this.intersections = this.raycaster.intersectObjects(this.options.navigationMeshes, true);
+          // Adjust the curve's flight time to terminate at the intersection point, then let the
+          // rest of the algorithm do it's thing!
+          this.guideCurve.time = ((i-1)*segmentT) + (segmentT * (intersection.distance/segmentLength));
 
-        // Did we intersect with anything?
-        if (this.intersections.length) {
-          // We only care about the closests intersection point
-          const intersection = this.intersections[0];
-          // Did we intersect between the segment points?
-          if (intersection.distance <= segmentLength) {
-            // Only consider it a valid teleport destination if the normal of the intersection point
-            // is at least a tiny bit horizontal and facing upward.
-            vert.copy(intersection.face.normal);
-            vert.transformDirection(intersection.object.matrixWorld);
-            if (vert.dot(UP_VEC) > 0.1) { // TODO: Figure out a better fudge factor
-              isValid = true;
-            }
-
-            // Regardless of whether or not the intersection was considered valid, we should break
-            // at this point, otherwise we'll end up with situations where we try to teleport
-            // through walls or similarly silly things.
-
-            // Adjust "t" to terminate at the intersection point, then let the rest of the algorithm
-            // do it's thing!
-            t = ((i-1)*segmentT) + (segmentT * (intersection.distance/segmentLength));
-            break;
-          }
+          // Only consider it a valid teleport destination if the normal of the intersection point
+          // is at least a tiny bit horizontal and facing upward.
+          vert.copy(intersection.face.normal);
+          vert.transformDirection(intersection.object.matrixWorld);
+          return vert.dot(UP_VEC) > 0.1; // TODO: Figure out a better fudge factor
         }
-
-        vert.copy(vert2);
       }
-    } else {
-      isValid = true;
+
+      vert.copy(vert2);
     }
 
-    this.guideCurve.time = t;
+    // Reached the end of our trace without hitting a valid teleportable surface, so return false.
+    return false;
+  }
 
+  updateGuideGeometry() {
+    const r = this.options.rayRadius;
     const segments = this.options.raySegments;
-
     const frames = this.guideCurve.computeFrenetFrames(segments, false);
 
     // TODO: Could avoid an array allocation here by updating geometry.attributes.position.array
     // directly.
-    let guidePositions = [];
+    const guidePositions = [];
+    const vert = TMP_VEC.set(0,0,0);
     for (let i = 0; i <= segments; i++) {
       // Set vertex to current position of the virtual ball at time t
-      this.guideCurve.guidePointAtTime(vert, i*t/segments);
+      this.guideCurve.getPoint(i/segments, vert);
       this.worldToLocal(vert);
 
       // Get the normal and binormal of the point. This is so the cross sections
@@ -577,9 +524,39 @@ export class XRTeleportGuide extends THREE.Group {
     geometry.attributes.position.array.set(guidePositions);
     geometry.attributes.position.needsUpdate = true;
     geometry.computeBoundingSphere();
+  }
+
+  // Updates the rendered guideline to match the given controller
+  updateGuideForController(controller) {
+    const useNavMeshes = this.options.navigationMeshes && this.options.navigationMeshes.length;
+
+    // Controller start position
+    const p = controller.getWorldPosition(this.guideCurve.origin);
+    // Adjusted for a static ground height
+    const pGround = p.y - (useNavMeshes ? -(this.options.maxFallDistance+0.1) : this.options.groundHeight);
+
+    // Set guide velocity to the direction of the controller, at 1m/s
+    const v = controller.getWorldDirection(this.guideCurve.velocity);
+
+    // Rotate the target texture to always be oriented the same way as the guide beam.
+    this.targetMesh.rotation.z = Math.atan2(v.x, v.z);
+
+    // Scale the initial velocity
+    v.multiplyScalar(this.options.teleportVelocity);
+
+    const g = this.guideCurve.gravity;
+
+    // Time for tele ball to hit ground
+    this.guideCurve.time = (-v.y + Math.sqrt(v.y**2 - 2*pGround*g.y))/g.y;
+
+    // Clip the curve against the nav mesh if needed
+    let isValid = useNavMeshes ? this.clipCurveToNavigationMesh() : true;
+
+    // Update the guide geometry to match the adjusted curve
+    this.updateGuideGeometry();
 
     // Check to see if our destination point is valid
-    this.guideCurve.guidePointAtTime(this.lastTargetPoint, t);
+    this.guideCurve.guidePointAtTime(this.lastTargetPoint, this.guideCurve.time);
 
     // If the teleport point is too far below us, don't allow it. (Let's just
     // pretend we're preventing the user from falling and hurting themselves.)
