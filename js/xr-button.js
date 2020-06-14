@@ -27,7 +27,6 @@ const BUTTON_SEGMENTS = 32;
 const IMAGE_RADIUS = 0.09;
 
 // A button that can be shown both in the DOM and in XR
-
 const textureLoader = new THREE.TextureLoader();
 const raycaster = new THREE.Raycaster();
 const tmpMatrix = new THREE.Matrix4();
@@ -42,10 +41,26 @@ export class XRButtonManager {
     this.selectEventListener = (event) => {
       this.onSelect(event.target);
     };
+
+    let buttonGeometry = new THREE.CylinderBufferGeometry(BUTTON_RADIUS, BUTTON_RADIUS, BUTTON_HEIGHT, BUTTON_SEGMENTS);
+    this._buttonMesh = new THREE.Mesh(
+      buttonGeometry,
+      new THREE.MeshLambertMaterial({ color: 0xAA2222 })
+    );
+    this._outlineMesh = new THREE.Mesh(
+      buttonGeometry,
+      new THREE.MeshBasicMaterial({ color: 0xAAFFAA, side: THREE.BackSide })
+    );
+
+    this._imageGeometry = new THREE.CircleBufferGeometry(IMAGE_RADIUS, BUTTON_SEGMENTS);
   }
 
   createButton(options) {
-    let button = new XRButton(options);
+    let button = new XRButton(
+      this._buttonMesh.clone(),
+      this._outlineMesh.clone(),
+      this._imageGeometry,
+      options);
     this._buttons.push(button);
     return button;
   }
@@ -105,27 +120,15 @@ export class XRButtonManager {
   }
 }
 
-class XRButton extends THREE.Object3D {
-  constructor(options = {}) {
+class XRButton extends THREE.Group {
+  constructor(buttonMesh, outlineMesh, imageGeometry, options = {}) {
     super();
 
-    let buttonGeometry = new THREE.CylinderBufferGeometry(BUTTON_RADIUS, BUTTON_RADIUS, BUTTON_HEIGHT, BUTTON_SEGMENTS);
-    let buttonMaterial = new THREE.MeshLambertMaterial({
-      color: 0xAA2222,
-      //roughness: 0.8,
-      //metalness: 0.5
-    });
-
-    this._buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
+    this._buttonMesh = buttonMesh;
     this._buttonMesh.position.y = BUTTON_HEIGHT * 0.5;
     this.add(this._buttonMesh);
 
-    let outlineMaterial = new THREE.MeshBasicMaterial({
-      color: 0xAAFFAA,
-      side: THREE.BackSide,
-    });
-
-    this._outlineMesh = new THREE.Mesh(buttonGeometry, outlineMaterial);
+    this._outlineMesh = outlineMesh;
     this._outlineMesh.position.copy(this._buttonMesh.position);
     this._outlineMesh.scale.multiplyScalar(1.05);
     this._outlineMesh.visible = false;
@@ -142,13 +145,13 @@ class XRButton extends THREE.Object3D {
         this._texture.repeat.y = 0.25;
       }
 
-      let imageGeometry = new THREE.CircleBufferGeometry(IMAGE_RADIUS, BUTTON_SEGMENTS);
-      let imageMaterial = new THREE.MeshBasicMaterial({
-        color: 0xFFFFFF,
-        map: this._texture
-      });
-
-      this._imageMesh = new THREE.Mesh(imageGeometry, imageMaterial);
+      this._imageMesh = new THREE.Mesh(
+        imageGeometry,
+        new THREE.MeshBasicMaterial({
+          color: 0xFFFFFF,
+          map: this._texture
+        })
+      );
       this._imageMesh.rotateX(Math.PI * -0.5);
       this._imageMesh.position.y = BUTTON_HEIGHT * 1.01;
       this.add(this._imageMesh);
