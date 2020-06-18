@@ -129,7 +129,7 @@ export class BlobShadowManager extends THREE.Mesh {
       this._shadowOffsets.setXYZW(i, worldPosition.x, DEFAULT_SHADOW_HEIGHT, worldPosition.z, opacity);
     }
 
-    this.geometry.maxInstancedCount = this._shadowNodes.length;
+    this.geometry.instanceCount = this._shadowNodes.length;
     this._shadowOffsets.needsUpdate = true;
   }
 }
