@@ -27,7 +27,8 @@ const BUTTON_SEGMENTS = 32;
 const IMAGE_RADIUS = 0.09;
 
 // A button that can be shown both in the DOM and in XR
-const textureLoader = new THREE.TextureLoader();
+const useImageBitmap = typeof createImageBitmap !== 'undefined';
+const textureLoader = useImageBitmap ? new THREE.ImageBitmapLoader() : new THREE.TextureLoader();
 const raycaster = new THREE.Raycaster();
 const tmpMatrix = new THREE.Matrix4();
 
@@ -136,25 +137,34 @@ class XRButton extends THREE.Group {
 
     if (options.imageUrl) {
       this._imageUrl = options.imageUrl;
-      this._texture = textureLoader.load(options.imageUrl);
 
-      if (options.imageOffset) {
-        this._texture.offset.x = options.imageOffset[0];
-        this._texture.offset.y = 1.0 - (options.imageOffset[1]+0.25);
-        this._texture.repeat.x = 0.25;
-        this._texture.repeat.y = 0.25;
-      }
+      textureLoader.load(options.imageUrl, (image) => {
+        if ( useImageBitmap ) {
+          this._texture = new THREE.CanvasTexture(image);
+        } else {
+          this._texture = image;
+        }
 
-      this._imageMesh = new THREE.Mesh(
-        imageGeometry,
-        new THREE.MeshBasicMaterial({
-          color: 0xFFFFFF,
-          map: this._texture
-        })
-      );
-      this._imageMesh.rotateX(Math.PI * -0.5);
-      this._imageMesh.position.y = BUTTON_HEIGHT * 1.01;
-      this.add(this._imageMesh);
+        this._texture.flipY = false;
+
+        if (options.imageOffset) {
+          this._texture.offset.x = options.imageOffset[0];
+          this._texture.offset.y = options.imageOffset[1]+0.25;
+          this._texture.repeat.x = 0.25;
+          this._texture.repeat.y = -0.25;
+        }
+
+        this._imageMesh = new THREE.Mesh(
+          imageGeometry,
+          new THREE.MeshBasicMaterial({
+            color: 0xFFFFFF,
+            map: this._texture
+          })
+        );
+        this._imageMesh.rotateX(Math.PI * -0.5);
+        this._imageMesh.position.y = BUTTON_HEIGHT * 1.01;
+        this.add(this._imageMesh);
+      });
     }
 
     this._hovered = false;

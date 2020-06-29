@@ -236,7 +236,11 @@ export function PreloadDinosaurApp(debug = false) {
   xrControllerModelFactory = new XRControllerModelFactory(gltfLoader);
 
   environment = new PenEnvironment(gltfLoader);
-  scene.add(environment);
+  environment.loaded.then(() => {
+    renderer.compileTarget(scene, environment, () => {
+      scene.add(environment);
+    });
+  });
 
   buttonManager = new XRButtonManager();
   buttonGroup = new THREE.Group();
@@ -585,7 +589,11 @@ function loadModel(key) {
     xrDinosaur.visible = debugSettings.drawDinosaur;
     xrDinosaur.scale.setScalar(dinosaurScale, dinosaurScale, dinosaurScale);
 
-    scene.add(xrDinosaur);
+    // Ensure the dinosaur's shaders are ready to use before we add it to the
+    // scene.
+    renderer.compileTarget(scene, xrDinosaur, () => {
+      scene.add(xrDinosaur);
+    });
 
     controls.target.copy(xrDinosaur.center);
     controls.update();
