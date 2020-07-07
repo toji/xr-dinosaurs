@@ -27,7 +27,7 @@ const BUTTON_SEGMENTS = 32;
 const IMAGE_RADIUS = 0.09;
 
 // A button that can be shown both in the DOM and in XR
-const useImageBitmap = typeof createImageBitmap !== 'undefined';
+const useImageBitmap = typeof createImageBitmap !== 'undefined' && /Firefox/.test( navigator.userAgent ) === false;
 const textureLoader = useImageBitmap ? new THREE.ImageBitmapLoader() : new THREE.TextureLoader();
 const raycaster = new THREE.Raycaster();
 const tmpMatrix = new THREE.Matrix4();
