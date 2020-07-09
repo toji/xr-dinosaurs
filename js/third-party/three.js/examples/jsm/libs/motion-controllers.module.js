@@ -53,20 +53,13 @@ async function fetchJsonFile(path) {
   }
 }
 
-let profileListCache = {};
-let profileCache = {};
-
 async function fetchProfilesList(basePath) {
   if (!basePath) {
     throw new Error('No basePath supplied');
   }
 
-  if (!profileListCache[basePath]) {
-    const profileListFileName = 'profilesList.json';
-    profileListCache[basePath] = fetchJsonFile(`${basePath}/${profileListFileName}`);
-  }
-
-  const profilesList = await profileListCache[basePath];
+  const profileListFileName = 'profilesList.json';
+  const profilesList = await fetchJsonFile(`${basePath}/${profileListFileName}`);
   return profilesList;
 }
 
@@ -113,10 +106,7 @@ async function fetchProfile(xrInputSource, basePath, defaultProfile = null, getA
     };
   }
 
-  if (!profileCache[match.profilePath]) {
-    profileCache[match.profilePath] = fetchJsonFile(match.profilePath);
-  }
-  const profile = await profileCache[match.profilePath];
+  const profile = await fetchJsonFile(match.profilePath);
 
   let assetPath;
   if (getAssetPath) {

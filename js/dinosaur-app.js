@@ -237,9 +237,9 @@ export function PreloadDinosaurApp(debug = false) {
 
   environment = new PenEnvironment(gltfLoader);
   environment.loaded.then(() => {
-    renderer.compileTarget(scene, environment, () => {
+    //renderer.compileTarget(scene, environment, () => {
       scene.add(environment);
-    });
+    //});
   });
 
   buttonManager = new XRButtonManager();
@@ -591,9 +591,9 @@ function loadModel(key) {
 
     // Ensure the dinosaur's shaders are ready to use before we add it to the
     // scene.
-    renderer.compileTarget(scene, xrDinosaur, () => {
+    //renderer.compileTarget(scene, xrDinosaur, () => {
       scene.add(xrDinosaur);
-    });
+    //});
 
     controls.target.copy(xrDinosaur.center);
     controls.update();
