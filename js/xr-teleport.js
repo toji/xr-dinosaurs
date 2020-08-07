@@ -538,8 +538,12 @@ export class XRTeleportGuide extends THREE.Group {
     // Set guide velocity to the direction of the controller, at 1m/s
     const v = controller.getWorldDirection(this.guideCurve.velocity);
 
-    // Rotate the target texture to always be oriented the same way as the guide beam.
-    this.targetMesh.rotation.z = Math.atan2(v.x, v.z);
+    // Rotate the target texture to always be oriented the same way as the guide beam,
+    // accounting for snap turning.
+    const targetAngle = Math.atan2(v.x, v.z);
+    const refQuaternion = this.getWorldQuaternion(new THREE.Quaternion());
+    const refRotation = new THREE.Euler(0, 0, 0, 'YXZ').setFromQuaternion(refQuaternion); // Y-first to allow 2π range
+    this.targetMesh.rotation.z = targetAngle - refRotation.y;
 
     // Scale the initial velocity
     v.multiplyScalar(this.options.teleportVelocity);
