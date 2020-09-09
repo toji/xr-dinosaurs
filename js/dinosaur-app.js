@@ -325,6 +325,7 @@ export function PreloadDinosaurApp(debug = false) {
       scene.background = null;
       environment.visible = false;
       buttonGroup.visible = false;
+      blobShadowManager.arMode = true;
 
       // Lighting estimation experiement
       xrLighting.xrSession = xrSession;
@@ -376,6 +377,7 @@ export function PreloadDinosaurApp(debug = false) {
       xrDinosaur.visible = true;
     }
     blobShadowManager.visible = true;
+    blobShadowManager.arMode = false;
 
     // Stop ambient jungle sounds once the user exits VR.
     if (ambientSounds) {

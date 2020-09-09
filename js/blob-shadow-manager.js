@@ -103,6 +103,7 @@ export class BlobShadowManager extends THREE.Mesh {
     this._shadowNodes = [];
     this._shadowSize = DEFAULT_SHADOW_SIZE;
     this._shadowOffsets = shadowOffsets;
+    this._arMode = false;
   }
 
   set shadowNodes(value) {
@@ -121,11 +122,15 @@ export class BlobShadowManager extends THREE.Mesh {
     return this._shadowSize;
   }
 
+  set arMode(value) {
+    this._arMode = value;
+  }
+
   onBeforeRender() {
     for (let i = 0; i < this._shadowNodes.length; ++i) {
       this._shadowNodes[i].getWorldPosition(worldPosition);
 
-      let opacity = THREE.Math.lerp(1, .25, worldPosition.y * 0.75);
+      let opacity = THREE.Math.lerp(this._arMode ? 0.3 : 1, this._arMode ? 0.1 : .25, worldPosition.y * 0.75);
       this._shadowOffsets.setXYZW(i, worldPosition.x, DEFAULT_SHADOW_HEIGHT, worldPosition.z, opacity);
     }
 
