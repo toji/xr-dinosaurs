@@ -54,7 +54,11 @@ export class XRDinosaur extends THREE.Object3D {
     this.rotation.y = DEFAULT_ORIENTATION;
   }
 
-  set animations(animations) {
+  setAnimations(animations) {
+    this.animations = animations;
+
+    if (animations.length === 0) { return; }
+
     // Process animations into clips
     for (let i = 0; i < animations.length; ++i) {
       let animation = animations[i];

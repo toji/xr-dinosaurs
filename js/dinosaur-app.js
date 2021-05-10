@@ -34,6 +34,9 @@ import { DRACOLoader } from './third-party/three.js/examples/jsm/loaders/DRACOLo
 import { GLTFLoader } from './third-party/three.js/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from './third-party/three.js/examples/jsm/controls/OrbitControls.js';
 import { XRControllerModelFactory } from './third-party/three.js/examples/jsm/webxr/XRControllerModelFactory.js';
+import { OculusHandModel } from './third-party/three.js/examples/jsm/webxr/OculusHandModel.js';
+//import { OculusHandPointerModel } from './third-party/three.js/examples/jsm/webxr/OculusHandPointerModel.js';
+import dat from './third-party/dat.gui.module.js';
 
 // VR Button Layout
 const ROW_LENGTH = 4;
@@ -148,13 +151,20 @@ function initControllers() {
   inputRay.scale.z = 2;
 
   function buildController(index) {
-    let targetRay = renderer.xr.getController(index);
-    let grip = renderer.xr.getControllerGrip(index);
-    let model = xrControllerModelFactory.createControllerModel(grip);
+    const targetRay = renderer.xr.getController(index);
+    const grip = renderer.xr.getControllerGrip(index);
+    const model = xrControllerModelFactory.createControllerModel(grip);
 
     const rayMesh = inputRay.clone();
     targetRay.add(rayMesh);
     targetRay.rayMesh = rayMesh;
+
+    let hand = renderer.xr.getHand(index);
+    hand.add(new OculusHandModel(hand));
+    /*let handPointer = new OculusHandPointerModel(hand, targetRay);
+    hand.add(handPointer);*/
+
+    //scene.add(hand);
 
     targetRay.addEventListener('connected', (event) => {
       console.log(`Controller connected: ${event.data.profiles}`);
@@ -178,12 +188,14 @@ function initControllers() {
     locomotionManager.watchController(targetRay);
     locomotionManager.add(targetRay);
     locomotionManager.add(grip);
+    locomotionManager.add(hand);
 
     model.setEnvironmentMap(xrLighting.envMap);
 
     return {
       targetRay,
       grip,
+      hand,
       model
     };
   }
@@ -413,6 +425,7 @@ export function PreloadDinosaurApp(debug = false) {
 
     for (let controller of controllers) {
       controller.model.setEnvironmentMap(xrLighting.envMap);
+      controller.hand.setEnvironmentMap(xrLighting.envMap);
     }
   });
 
@@ -473,7 +486,8 @@ function StartXRSession(mode) {
   let referenceSpace = mode == 'immersive-ar' ? 'local' : 'local-floor';
 
   let sessionOptions = {
-    requiredFeatures: [referenceSpace]
+    requiredFeatures: [referenceSpace],
+    optionalFeatures: ['hand-tracking']
   };
   if (mode === 'immersive-ar') {
     sessionOptions.requiredFeatures.push('hit-test');

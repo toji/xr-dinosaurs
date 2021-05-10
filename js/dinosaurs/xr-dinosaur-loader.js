@@ -101,7 +101,7 @@ export class XRDinosaurLoader {
         for (let i = 0; i < gltf.animations.length; ++i) {
           trimEmptyLeadingKeyframes(gltf.animations[i]);
         }
-        dinosaur.animations = gltf.animations;
+        dinosaur.setAnimations(gltf.animations);
 
         if (key == this._currentKey) {
           this._currentDinosaur = dinosaur;
