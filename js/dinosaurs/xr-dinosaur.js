@@ -24,6 +24,8 @@ const DEFAULT_POSITION = [0, 0, -3];
 const DEFAULT_ORIENTATION = Math.PI * 0.2;
 const DEFAULT_HEIGHT = 3;
 const DEFAULT_ANIMATION_SEQUENCE = ['Idle'];
+const DEFAULT_DIE_ANIMATION = 'Die';
+const DEFAULT_GET_UP_ANIMATION = 'Get_Up';
 
 export class XRDinosaur extends THREE.Object3D {
   constructor() {
@@ -43,6 +45,8 @@ export class XRDinosaur extends THREE.Object3D {
     this.shadowNodeNames = [];
     this.shadowSize = 3;
     this.animationSequence = DEFAULT_ANIMATION_SEQUENCE;
+    this.dieAnimation = DEFAULT_DIE_ANIMATION;
+    this.getUpAnimation = DEFAULT_GET_UP_ANIMATION;
     this.buttonAtlasOffset = [0, 0];
 
     this.height = DEFAULT_HEIGHT;
@@ -56,7 +60,7 @@ export class XRDinosaur extends THREE.Object3D {
       let animation = animations[i];
       let action = this._mixer.clipAction(animation);
       this._actions[animation.name] = action;
-      if (animation.name == 'Die' || animation.name == 'Get_Up') {
+      if (animation.name == this.dieAnimation || animation.name == this.getUpAnimation) {
         action.loop = THREE.LoopOnce;
       }
     }
@@ -68,10 +72,10 @@ export class XRDinosaur extends THREE.Object3D {
     this._currentAction.play();
 
     let nextAnimation = (e) => {
-      if (e.action == this._actions.Die) {
+      if (e.action == this._actions[this.dieAnimation]) {
         this._mixer.stopAllAction();
         this._scared = false;
-        this._currentAction = this._actions.Get_Up;
+        this._currentAction = this._actions[this.getUpAnimation];
         this._currentAction.play();
       } else if (!this._scared) {
         this._mixer.stopAllAction();
@@ -98,9 +102,9 @@ export class XRDinosaur extends THREE.Object3D {
     if (this._scared) { return; }
     this._scared = true;
 
-    this._currentAction.crossFadeTo(this._actions.Die, 0.25);
-    this._currentAction = this._actions.Die;
-    this._actions.Die.play();
+    this._currentAction.crossFadeTo(this._actions[this.dieAnimation], 0.25);
+    this._currentAction = this._actions[this.dieAnimation];
+    this._currentAction.play();
   }
 
   get shadowNodes() {

@@ -36,13 +36,13 @@ import { OrbitControls } from './third-party/three.js/examples/jsm/controls/Orbi
 import { XRControllerModelFactory } from './third-party/three.js/examples/jsm/webxr/XRControllerModelFactory.js';
 
 // VR Button Layout
-const ROW_LENGTH = 5;
+const ROW_LENGTH = 4;
 const BUTTON_SPACING = 0.25;
 const LEFT_BUTTON_X = (BUTTON_SPACING * (ROW_LENGTH - 1) * -0.5);
 
-const HORN_BUTTON_POSITION = new THREE.Vector3(0.75, 0, 0);
-const UP_BUTTON_POSITION = new THREE.Vector3(-0.75, 0, -BUTTON_SPACING * 0.5);
-const DOWN_BUTTON_POSITION = new THREE.Vector3(-0.75, 0, BUTTON_SPACING * 0.5);
+const HORN_BUTTON_POSITION = new THREE.Vector3(0.65, 0, 0);
+const UP_BUTTON_POSITION = new THREE.Vector3(-0.65, 0, 0);
+const DOWN_BUTTON_POSITION = new THREE.Vector3(-0.65, 0, BUTTON_SPACING);
 
 const IDEAL_RELATIVE_BUTTON_HEIGHT = -0.6;
 const MIN_BUTTON_HEIGHT = 0.3;
@@ -259,7 +259,7 @@ export function PreloadDinosaurApp(debug = false) {
   });
   environment.platform.add(locomotionManager);
 
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 1000);
   camera.position.set(0, 5.0, 5.0);
   camera.add(listener);
   locomotionManager.add(camera);
@@ -494,7 +494,7 @@ function buildButtons() {
     buttonGroup.visible = false;
   }
 
-  buttonGroup.position.y = targetButtonGroupHeight = 0.6;
+  buttonGroup.position.y = targetButtonGroupHeight = 0.7;
   buttonGroup.position.z = -0.9;
   buttonGroup.rotation.x = Math.PI * 0.3;
 
@@ -560,7 +560,7 @@ function buildButtons() {
   buttonGroup.add(downButton);
 
   // "Glass" pedestal
-  let glassGeometry = new THREE.BoxBufferGeometry(1.8, 0.05, 0.5);
+  let glassGeometry = new THREE.BoxBufferGeometry(1.65, 0.05, 0.75);
   let glassMaterial = new THREE.MeshLambertMaterial({
     color: 0xAACCFF,
     transparent: true,
@@ -568,6 +568,7 @@ function buildButtons() {
   });
   let glassMesh = new THREE.Mesh(glassGeometry, glassMaterial);
   glassMesh.position.y = -0.05;
+  glassMesh.position.z = 0.115;
   buttonGroup.add(glassMesh);
 }
 

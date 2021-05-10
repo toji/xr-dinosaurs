@@ -144,12 +144,20 @@ li[data-dinosaur="triceratops"]:before {
   background-position: -128px -128px;
 }
 
+li[data-dinosaur="mammoth"]:before {
+  background-position: -256px -384px;
+}
+
 li[data-dinosaur="parasaurolophus"]:before {
   background-position: -384px 0;
 }
 
 li[data-dinosaur="pachycephalosaurus"]:before {
   background-position: -256px 0;
+}
+
+li[data-dinosaur="sabertooth"]:before {
+  background-position: -384px -384px;
 }
 
 li[data-dinosaur="spinosaurus"]:before {

@@ -95,6 +95,33 @@ export class Dilophosaurus extends XRDinosaur {
   }
 }
 
+export class Mammoth extends XRDinosaur {
+  constructor() {
+    super();
+
+    this.path = 'media/models/mammoth/';
+    this.buttonAtlasOffset = [0.5, 0.75];
+
+    this.shadowNodeNames = [
+      'Mammoth_L_Foot_041',
+      'Mammoth_R_Foot_045',
+      'Mammoth_L_Hand_032',
+      'Mammoth_R_Hand_037',
+      'Mammoth_Tail03_049',
+      'Mammoth_Tongue02_014',
+      'Mammoth_Trunk05_00'
+    ];
+    this.shadowSize = 2.5;
+
+    this.animationSequence = ['Mammoth_Idle', 'Mammoth_Look_Side', 'Mammoth_Idle', 'Mammoth_Shake', 'Mammoth_Idle'];
+    this.dieAnimation = 'Mammoth_Die';
+    this.getUpAnimation = 'Mammoth_Get_Up';
+
+    this.height = 4.8;
+    this.position.set(151, 0, 202);
+  }
+}
+
 export class Pachycephalosaurus extends XRDinosaur {
   constructor() {
     super();
@@ -153,6 +180,32 @@ export class Utahraptor extends XRDinosaur {
 
     this.height = 2.0;
     this.position.set(-0.5, 0, -4);
+  }
+}
+
+export class Sabertooth extends XRDinosaur {
+  constructor() {
+    super();
+
+    this.path = 'media/models/sabertooth/';
+    this.buttonAtlasOffset = [0.75, 0.75];
+
+    this.shadowNodeNames = [
+      'Sabertooth_L_Toe0_035',
+      'Sabertooth_R_Toe0_039',
+      'Sabertooth_L_Hand_027',
+      'Sabertooth_R_Hand_031',
+      //'Sabertooth_Tail02_041',
+      'Sabertooth_Tongue_09'
+    ];
+    this.shadowSize = 2.0;
+
+    this.animationSequence = ['Sabertooth_Idle', 'Sabertooth_Look_Back', 'Sabertooth_Idle', 'Sabertooth_Look_Side', 'Sabertooth_Idle'];
+    this.dieAnimation = 'Sabertooth_Die';
+    this.getUpAnimation = 'Sabertooth_Get_Up';
+
+    this.height = 1.8;
+    this.position.set(61, 0, 78);
   }
 }
 
@@ -255,9 +308,11 @@ export let AllDinosaurs = {
   ankylosaurus: new Ankylosaurus(),
   brachiosaurus: new Brachiosaurus(),
   dilophosaurus: new Dilophosaurus(),
+  mammoth: new Mammoth(),
   pachycephalosaurus: new Pachycephalosaurus(),
   parasaurolophus: new Parasaurolophus(),
   raptor: new Utahraptor(),
+  sabertooth: new Sabertooth(),
   spinosaurus: new Spinosaurus(),
   stegosaurus: new Stegosaurus(),
   triceratops: new Triceratops(),
