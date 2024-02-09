@@ -15,7 +15,6 @@ Models
 
  - "[All Dinosaur models](https://sketchfab.com/JoseDiaz)" by [Jose Diaz](https://dogzerx.blogspot.com/) and purchased from SketchFab under their [Standard License](https://sketchfab.com/licenses).
  - "[Jurassic Park Jaula](https://sketchfab.com/3d-models/jurassic-park-jaula-0f309eeffcf1492ca176bfa27fa21917)" environment by Gigano Regulus
- - "[Controller](https://poly.google.com/view/cdts4fBVXe7)" model by Jack Brookes is licensed under [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/legalcode).
 
 Images
 ------
@@ -29,3 +28,4 @@ Audio
  - "[Diesel Horn](https://freesound.org/people/thepodcastdoctor/sounds/486660/)" audio by thepodcastdoctor
  - "[Heavy Dinosaur Footsteps](https://freesound.org/people/theguitarmanjp/sounds/385013/)" audio by theguitarmanjp
  - "[Soft Footsteps Gravel/Leaves/Dirt/Pavement](https://freesound.org/people/newagesoup/sounds/342475/)" audio by newagesoup
+ - "[Click](https://freesound.org/people/Vilkas_Sound/sounds/707038/) audio by Vilkas_Sound

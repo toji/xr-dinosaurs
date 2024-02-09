@@ -38,6 +38,7 @@ export class XRButtonManager {
     this._controllers = [];
     this._frame = 0;
     this.active = true;
+    this.clickSound = null;
 
     this.selectEventListener = (event) => {
       this.onSelect(event.target);
@@ -84,6 +85,8 @@ export class XRButtonManager {
       let hovered = this.getHoveredButtons(controller);
       if (hovered && hovered.length > 0) {
         hovered[0].click();
+        this.clickSound?.stop();
+        this.clickSound?.play();
       }
     }
   }

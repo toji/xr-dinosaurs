@@ -169,8 +169,8 @@ function initControllers() {
     targetRay.addEventListener('connected', (event) => {
       console.log(`Controller connected: ${event.data.profiles}`);
       const xrInputSource = event.data;
-      grip.visible = xrInputSource !== 'gaze';
-      targetRay.visible = xrInputSource !== 'gaze';
+      grip.visible = xrInputSource.targetRayMode !== 'gaze';
+      targetRay.visible = xrInputSource.targetRayMode === 'tracked-pointer';
       buttonManager.addController(targetRay);
     });
 
@@ -359,6 +359,13 @@ export function PreloadDinosaurApp(debug = false) {
       }
     } else {
       buttonManager.active = true;
+
+      if (!buttonManager.clickSound) {
+        buttonManager.clickSound = new THREE.Audio(listener);
+        audioLoader.load('media/sounds/click.mp3', (buffer) => {
+          buttonManager.clickSound.setBuffer(buffer);
+        });
+      }
 
       // Load and play ambient jungle sounds once the user enters VR.
       if (!ambientSounds) {
@@ -595,7 +602,7 @@ function loadModel(key) {
     blobShadowManager.shadowNodes = [];
   }
 
-  return xrDinosaurLoader.load(key).then((dinosaur) => {
+  return xrDinosaurLoader.load(key).then(async (dinosaur) => {
     if (dinosaur != xrDinosaurLoader.currentDinosaur) { return; }
 
     if (xrDinosaur) {
@@ -604,15 +611,14 @@ function loadModel(key) {
     }
 
     xrDinosaur = dinosaur;
-    xrDinosaur.envMap = xrLighting.envMap;
+    //xrDinosaur.envMap = xrLighting.envMap;
     xrDinosaur.visible = debugSettings.drawDinosaur;
     xrDinosaur.scale.setScalar(dinosaurScale, dinosaurScale, dinosaurScale);
 
     // Ensure the dinosaur's shaders are ready to use before we add it to the
     // scene.
-    //renderer.compileTarget(scene, xrDinosaur, () => {
-      scene.add(xrDinosaur);
-    //});
+    await renderer.compileAsync(xrDinosaur, camera, scene);
+    scene.add(xrDinosaur);
 
     controls.target.copy(xrDinosaur.center);
     controls.update();
