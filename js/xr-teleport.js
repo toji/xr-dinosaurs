@@ -232,6 +232,7 @@ export class XRLocomotionManager extends THREE.Group {
   endSelectDestination(input, renderer, camera) {
     if (!input || input != this.teleportingInput) { return; }
 
+    renderer.xr.updateCamera(camera);
     const xrCamera = renderer.xr.getCamera(camera);
     const validDest = this.teleportGuide.getTeleportOffset(OFFSET_VEC, xrCamera);
 
