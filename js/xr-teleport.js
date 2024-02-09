@@ -389,6 +389,8 @@ export class XRTeleportGuide extends THREE.Group {
     }
 
     const guideTexture = new THREE.DataTexture(RAY_TEXTURE_DATA, 48, 1);
+    guideTexture.needsUpdate = true;
+
     const material = new THREE.ShaderMaterial({
       uniforms: {
         map: { value: guideTexture },

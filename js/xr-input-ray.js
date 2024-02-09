@@ -82,6 +82,7 @@ export class XRInputRay extends THREE.Mesh {
     geometry.setAttribute('uv', new THREE.InterleavedBufferAttribute(interleavedBuffer, 2, 3, false));
 
     let rayTexture = new THREE.DataTexture(RAY_TEXTURE_DATA, 48, 1);
+    rayTexture.needsUpdate = true;
 
     let material = new THREE.ShaderMaterial({
       uniforms: {
