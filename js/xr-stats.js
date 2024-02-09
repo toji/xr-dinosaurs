@@ -23,7 +23,7 @@
 // library, but has the significant advantage that it can be placed in the 3D
 // scene if needed, which allows you to view it while in VR.
 
-import * as THREE from './third-party/three.js/build/three.module.js';
+import * as THREE from 'three';
 
 const SEGMENTS = 30;
 const MAX_FPS = 90;

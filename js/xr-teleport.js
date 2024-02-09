@@ -4,7 +4,7 @@
 // My primary contribution was making the rendering fit the app's style better
 // and doing a bit of additional encapsulation and abstraction work.
 
-import * as THREE from './third-party/three.js/build/three.module.js';
+import * as THREE from 'three';
 
 const OFFSET_VEC = new THREE.Vector3();
 

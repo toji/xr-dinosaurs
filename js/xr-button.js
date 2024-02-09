@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import * as THREE from './third-party/three.js/build/three.module.js';
+import * as THREE from 'three';
 
 const BUTTON_RADIUS = 0.1;
 const BUTTON_HEIGHT = 0.04;
@@ -43,7 +43,7 @@ export class XRButtonManager {
       this.onSelect(event.target);
     };
 
-    let buttonGeometry = new THREE.CylinderBufferGeometry(BUTTON_RADIUS, BUTTON_RADIUS, BUTTON_HEIGHT, BUTTON_SEGMENTS);
+    let buttonGeometry = new THREE.CylinderGeometry(BUTTON_RADIUS, BUTTON_RADIUS, BUTTON_HEIGHT, BUTTON_SEGMENTS);
     this._buttonMesh = new THREE.Mesh(
       buttonGeometry,
       new THREE.MeshLambertMaterial({ color: 0xAA2222 })
@@ -53,7 +53,7 @@ export class XRButtonManager {
       new THREE.MeshBasicMaterial({ color: 0xAAFFAA, side: THREE.BackSide })
     );
 
-    this._imageGeometry = new THREE.CircleBufferGeometry(IMAGE_RADIUS, BUTTON_SEGMENTS);
+    this._imageGeometry = new THREE.CircleGeometry(IMAGE_RADIUS, BUTTON_SEGMENTS);
   }
 
   createButton(options) {

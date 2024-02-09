@@ -4,15 +4,20 @@ const DEFAULT_HAND_PROFILE_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-pro
 
 class XRHandMeshModel {
 
-	constructor( handModel, controller, path, handedness ) {
+	constructor( handModel, controller, path, handedness, loader = null, onLoad = null ) {
 
 		this.controller = controller;
 		this.handModel = handModel;
 
 		this.bones = [];
 
-		const loader = new GLTFLoader();
-		loader.setPath( path || DEFAULT_HAND_PROFILE_PATH );
+		if ( loader === null ) {
+
+			loader = new GLTFLoader();
+			loader.setPath( path || DEFAULT_HAND_PROFILE_PATH );
+
+		}
+
 		loader.load( `${handedness}.glb`, gltf => {
 
 			const object = gltf.scene.children[ 0 ];
@@ -22,8 +27,6 @@ class XRHandMeshModel {
 			mesh.frustumCulled = false;
 			mesh.castShadow = true;
 			mesh.receiveShadow = true;
-
-			mesh.material.side = 0; // Workaround: force FrontSide
 
 			const joints = [
 				'wrist',
@@ -71,6 +74,8 @@ class XRHandMeshModel {
 
 			} );
 
+			if ( onLoad ) onLoad( object );
+
 		} );
 
 	}
@@ -92,13 +97,9 @@ class XRHandMeshModel {
 
 					const position = XRJoint.position;
 
-					if ( bone ) {
-
-						bone.position.copy( position );
-						bone.quaternion.copy( XRJoint.quaternion );
-						// bone.scale.setScalar( XRJoint.jointRadius || defaultRadius );
-
-					}
+					bone.position.copy( position );
+					bone.quaternion.copy( XRJoint.quaternion );
+					// bone.scale.setScalar( XRJoint.jointRadius || defaultRadius );
 
 				}
 

@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import * as THREE from './third-party/three.js/build/three.module.js';
-import { RGBELoader } from './third-party/three.js/examples/jsm/loaders/RGBELoader.js';
+import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 const LIGHT_PROBE_INTENSITY = 3;
 const REFLECTION_UPDATE_RATE = 1000; // ms
@@ -31,7 +31,8 @@ export class XRLighting extends THREE.Group {
     this._renderer = renderer;
     this._pmremGenerator = new THREE.PMREMGenerator(renderer);
 
-    this._hemisphereLight = new THREE.HemisphereLight(0xFFFFFF, 0x448844);
+    this._hemisphereLight = new THREE.HemisphereLight(0xBBFFDD, 0x448844);
+    this._hemisphereLight.intensity = 4;
     this.add(this._hemisphereLight);
 
     this._envMap = null;
@@ -53,8 +54,9 @@ export class XRLighting extends THREE.Group {
 
     return new Promise((resolve) => {
       let rgbeLoader = new RGBELoader();
-      rgbeLoader.setDataType(THREE.UnsignedByteType);
+      //rgbeLoader.setDataType(THREE.UnsignedByteType);
       rgbeLoader.load(url, (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
         this._envMap = this._pmremGenerator.fromEquirectangular(texture).texture;
         if (!this._xrEnvMap) {
           this.dispatchEvent( { type: 'envmapchange' } );
@@ -128,12 +130,12 @@ export class XRLighting extends THREE.Group {
 
           this.remove(this._hemisphereLight);
         }
-        
+
         if (!this._xrDirectionalLight) {
           this._xrDirectionalLight = new THREE.DirectionalLight();
           this.add(this._xrDirectionalLight);
         }
-        
+
         this._xrLightProbe.sh.fromArray(lightProbe.sphericalHarmonics.coefficients);
 
         let intensityScalar = Math.max(1.0,

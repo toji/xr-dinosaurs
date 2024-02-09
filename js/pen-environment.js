@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import * as THREE from './third-party/three.js/build/three.module.js';
+import * as THREE from 'three';
 
 const PLATFORM_SPEED = 0.5; // Meters/second
 const MAX_PLATFORM_HEIGHT = 5;

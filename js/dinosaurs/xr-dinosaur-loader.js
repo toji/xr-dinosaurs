@@ -40,7 +40,7 @@ function trimEmptyLeadingKeyframes(animation) {
       }
     }
   }
-  
+
   // If the animation start time was greater than zero adjust all
   // track times (and the animation duration) to re-root the animation
   // at 0.
@@ -88,6 +88,7 @@ export class XRDinosaurLoader {
       let fileName = dinosaur.file || 'scene.gltf';
       this._gltfLoader.load(fileName, (gltf) => {
         // Scale to a more realistic size based on the real dinosaur's height
+        gltf.scene.updateMatrixWorld(true);
         let bbox = new THREE.Box3().setFromObject(gltf.scene);
         let modelScale = dinosaur.height / (bbox.max.y - bbox.min.y);
         gltf.scene.scale.multiplyScalar(modelScale);

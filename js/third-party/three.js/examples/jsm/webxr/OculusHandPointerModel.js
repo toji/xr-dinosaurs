@@ -1,4 +1,4 @@
-import * as THREE from '../../../build/three.module.js';
+import * as THREE from 'three';
 
 const PINCH_MAX = 0.05;
 const PINCH_THRESHOLD = 0.02;
@@ -13,8 +13,8 @@ const POINTER_LENGTH = 0.035;
 const POINTER_SEGMENTS = 16;
 const POINTER_RINGS = 12;
 const POINTER_HEMISPHERE_ANGLE = 110;
-const YAXIS = new THREE.Vector3( 0, 1, 0 );
-const ZAXIS = new THREE.Vector3( 0, 0, 1 );
+const YAXIS = /* @__PURE__ */ new THREE.Vector3( 0, 1, 0 );
+const ZAXIS = /* @__PURE__ */ new THREE.Vector3( 0, 0, 1 );
 
 const CURSOR_RADIUS = 0.02;
 const CURSOR_MAX_DISTANCE = 1.5;
@@ -27,9 +27,10 @@ class OculusHandPointerModel extends THREE.Object3D {
 
 		this.hand = hand;
 		this.controller = controller;
+
+		// Unused
 		this.motionController = null;
 		this.envMap = null;
-
 		this.mesh = null;
 
 		this.pointerGeometry = null;
@@ -43,26 +44,43 @@ class OculusHandPointerModel extends THREE.Object3D {
 
 		this.raycaster = null;
 
-		hand.addEventListener( 'connected', ( event ) => {
+		this._onConnected = this._onConnected.bind( this );
+		this._onDisconnected = this._onDisconnected.bind( this );
+		this.hand.addEventListener( 'connected', this._onConnected );
+		this.hand.addEventListener( 'disconnected', this._onDisconnected );
 
-			const xrInputSource = event.data;
-			if ( xrInputSource.hand ) {
+	}
 
-				this.visible = true;
-				this.xrInputSource = xrInputSource;
+	_onConnected( event ) {
 
-				this.createPointer();
+		const xrInputSource = event.data;
+		if ( xrInputSource.hand ) {
 
-			}
+			this.visible = true;
+			this.xrInputSource = xrInputSource;
 
-		} );
+			this.createPointer();
+
+		}
+
+	}
+
+	_onDisconnected() {
+
+		this.visible = false;
+		this.xrInputSource = null;
+
+		if ( this.pointerGeometry ) this.pointerGeometry.dispose();
+		if ( this.pointerMesh && this.pointerMesh.material ) this.pointerMesh.material.dispose();
+
+		this.clear();
 
 	}
 
 	_drawVerticesRing( vertices, baseVector, ringIndex ) {
 
 		const segmentVector = baseVector.clone();
-		for ( var i = 0; i < POINTER_SEGMENTS; i ++ ) {
+		for ( let i = 0; i < POINTER_SEGMENTS; i ++ ) {
 
 			segmentVector.applyAxisAngle( ZAXIS, ( Math.PI * 2 ) / POINTER_SEGMENTS );
 			const vid = ringIndex * POINTER_SEGMENTS + i;
@@ -91,7 +109,7 @@ class OculusHandPointerModel extends THREE.Object3D {
 			Math.cos( ( Math.PI * POINTER_HEMISPHERE_ANGLE ) / 180 ) * rearRadius,
 			0
 		);
-		for ( var i = 0; i < POINTER_RINGS; i ++ ) {
+		for ( let i = 0; i < POINTER_RINGS; i ++ ) {
 
 			this._drawVerticesRing( vertices, rearBase, i + 1 );
 			rearBase.applyAxisAngle(
@@ -127,7 +145,7 @@ class OculusHandPointerModel extends THREE.Object3D {
 
 	createPointer() {
 
-		var i, j;
+		let i, j;
 		const vertices = new Array(
 			( ( POINTER_RINGS + 1 ) * POINTER_SEGMENTS + 2 ) * 3
 		).fill( 0 );
@@ -329,31 +347,31 @@ class OculusHandPointerModel extends THREE.Object3D {
 
 	}
 
-	intersectObject( object ) {
+	intersectObject( object, recursive = true ) {
 
 		if ( this.raycaster ) {
 
-			return this.raycaster.intersectObject( object );
+			return this.raycaster.intersectObject( object, recursive );
 
 		}
 
 	}
 
-	intersectObjects( objects ) {
+	intersectObjects( objects, recursive = true ) {
 
 		if ( this.raycaster ) {
 
-			return this.raycaster.intersectObjects( objects );
+			return this.raycaster.intersectObjects( objects, recursive );
 
 		}
 
 	}
 
-	checkIntersections( objects ) {
+	checkIntersections( objects, recursive = false ) {
 
 		if ( this.raycaster && ! this.attached ) {
 
-			const intersections = this.raycaster.intersectObjects( objects );
+			const intersections = this.raycaster.intersectObjects( objects, recursive );
 			const direction = new THREE.Vector3( 0, 0, - 1 );
 			if ( intersections.length > 0 ) {
 
@@ -379,6 +397,14 @@ class OculusHandPointerModel extends THREE.Object3D {
 			this.cursorObject.position.copy( direction.multiplyScalar( distance ) );
 
 		}
+
+	}
+
+	dispose() {
+
+		this._onDisconnected();
+		this.hand.removeEventListener( 'connected', this._onConnected );
+		this.hand.removeEventListener( 'disconnected', this._onDisconnected );
 
 	}
 

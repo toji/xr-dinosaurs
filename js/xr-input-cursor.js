@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import * as THREE from './third-party/three.js/build/three.module.js';
+import * as THREE from 'three';
 
 const CURSOR_RADIUS = 0.006;
 const CURSOR_SHADOW_RADIUS = 0.0085;
@@ -141,11 +141,11 @@ export class XRInputCursor extends THREE.Mesh {
         attribute float opacity;
         varying float vLuminance;
         varying float vOpacity;
-        
+
         void main() {
           vLuminance = position.z;
           vOpacity = opacity;
-        
+
           // Billboarded, constant size vertex transform.
           vec4 screenPos = projectionMatrix * modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
           screenPos /= screenPos.w;
@@ -156,7 +156,7 @@ export class XRInputCursor extends THREE.Mesh {
         const vec4 cursorColor = vec4(1.0, 1.0, 1.0, 1.0);
         varying float vLuminance;
         varying float vOpacity;
-        
+
         void main() {
           vec3 color = cursorColor.rgb * vLuminance;
           float opacity = cursorColor.a * vOpacity;

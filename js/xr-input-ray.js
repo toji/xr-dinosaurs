@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import * as THREE from './third-party/three.js/build/three.module.js';
+import * as THREE from 'three';
 
 const RAY_TEXTURE_DATA = new Uint8Array([
   0xff, 0xff, 0xff, 0x01, 0xff, 0xff, 0xff, 0x02, 0xbf, 0xbf, 0xbf, 0x04, 0xcc, 0xcc, 0xcc, 0x05,
@@ -52,17 +52,17 @@ export class XRInputRay extends THREE.Mesh {
       0.0, r, -l, 0.0, 0.0,
       0.0, -r, 0.0, 1.0, 1.0,
       0.0, -r, -l, 1.0, 0.0,
-    
+
       r, 0.0, 0.0, 0.0, 1.0,
       r, 0.0, -l, 0.0, 0.0,
       -r, 0.0, 0.0, 1.0, 1.0,
       -r, 0.0, -l, 1.0, 0.0,
-    
+
       0.0, -r, 0.0, 0.0, 1.0,
       0.0, -r, -l, 0.0, 0.0,
       0.0, r, 0.0, 1.0, 1.0,
       0.0, r, -l, 1.0, 0.0,
-    
+
       -r, 0.0, 0.0, 0.0, 1.0,
       -r, 0.0, -l, 0.0, 0.0,
       r, 0.0, 0.0, 1.0, 1.0,
@@ -102,11 +102,11 @@ export class XRInputRay extends THREE.Mesh {
       fragmentShader: `
         uniform sampler2D map;
         varying vec2 vUv;
-    
+
         const float fadePoint = ${RAY_FADE_POINT};
         const float fadeEnd = ${RAY_FADE_END};
         const vec4 rayColor = vec4(1.0, 1.0, 1.0, 1.0);
-    
+
         void main() {
           vec2 uv = vUv;
           float front_fade_factor = 1.0 - clamp(1.0 - (uv.y - fadePoint) / (1.0 - fadePoint), 0.0, 1.0);

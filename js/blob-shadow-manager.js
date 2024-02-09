@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import * as THREE from './third-party/three.js/build/three.module.js';
+import * as THREE from 'three';
 
 const MAX_SHADOW_COUNT = 10;
 const DEFAULT_SHADOW_SIZE = 3;
@@ -130,7 +130,7 @@ export class BlobShadowManager extends THREE.Mesh {
     for (let i = 0; i < this._shadowNodes.length; ++i) {
       this._shadowNodes[i].getWorldPosition(worldPosition);
 
-      let opacity = THREE.Math.lerp(this._arMode ? 0.3 : 1, this._arMode ? 0.1 : .25, worldPosition.y * 0.75);
+      let opacity = THREE.MathUtils.lerp(this._arMode ? 0.3 : 1, this._arMode ? 0.1 : .25, worldPosition.y * 0.75);
       this._shadowOffsets.setXYZW(i, worldPosition.x, DEFAULT_SHADOW_HEIGHT, worldPosition.z, opacity);
     }
 

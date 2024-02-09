@@ -29,13 +29,13 @@ import { XRLighting } from './xr-lighting.js';
 import { XRStats } from './xr-stats.js';
 
 // Third Party Imports
-import * as THREE from './third-party/three.js/build/three.module.js';
-import { DRACOLoader } from './third-party/three.js/examples/jsm/loaders/DRACOLoader.js';
-import { GLTFLoader } from './third-party/three.js/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from './third-party/three.js/examples/jsm/controls/OrbitControls.js';
-import { XRControllerModelFactory } from './third-party/three.js/examples/jsm/webxr/XRControllerModelFactory.js';
-import { OculusHandModel } from './third-party/three.js/examples/jsm/webxr/OculusHandModel.js';
-//import { OculusHandPointerModel } from './third-party/three.js/examples/jsm/webxr/OculusHandPointerModel.js';
+import * as THREE from 'three';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+import { OculusHandModel } from 'three/addons/webxr/OculusHandModel.js';
+//import { OculusHandPointerModel } from 'three/addons/webxr/OculusHandPointerModel.js';
 import dat from './third-party/dat.gui.module.js';
 
 // VR Button Layout
@@ -238,7 +238,7 @@ export function PreloadDinosaurApp(debug = false) {
   gltfLoader = new GLTFLoader();
   let dracoLoader = new DRACOLoader();
   dracoLoader.setWorkerLimit(1);
-  dracoLoader.setDecoderPath('js/third-party/three.js/examples/js/libs/draco/gltf/');
+  dracoLoader.setDecoderPath('js/third-party/three.js/examples/jsm/libs/draco/gltf/');
   gltfLoader.setDRACOLoader(dracoLoader);
 
   xrDinosaurLoader = new XRDinosaurLoader(gltfLoader);
@@ -290,7 +290,7 @@ export function PreloadDinosaurApp(debug = false) {
   renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
   //renderer.physicallyCorrectLights = true;
   renderer.xr.enabled = true;
 
@@ -415,18 +415,20 @@ export function PreloadDinosaurApp(debug = false) {
     // When exiting AR mode we need to re-enable the environment rendering
     if (xrMode != 'immersive-ar' && debugSettings.drawSkybox) {
       scene.background = xrLighting.envMap;
+      scene.environment = xrLighting.envMap;
     } else {
       scene.background = null;
+      scene.environment = xrLighting.envMap;
     }
 
-    if (xrDinosaur) {
+    /*if (xrDinosaur) {
       xrDinosaur.envMap = xrLighting.envMap;
     }
 
     for (let controller of controllers) {
       controller.model.setEnvironmentMap(xrLighting.envMap);
       controller.hand.setEnvironmentMap(xrLighting.envMap);
-    }
+    }*/
   });
 
   preloadPromise = xrLighting.loadHDRSkybox('media/textures/equirectangular/misty_pines_2k.hdr');
@@ -574,7 +576,7 @@ function buildButtons() {
   buttonGroup.add(downButton);
 
   // "Glass" pedestal
-  let glassGeometry = new THREE.BoxBufferGeometry(1.65, 0.05, 0.75);
+  let glassGeometry = new THREE.BoxGeometry(1.65, 0.05, 0.75);
   let glassMaterial = new THREE.MeshLambertMaterial({
     color: 0xAACCFF,
     transparent: true,
