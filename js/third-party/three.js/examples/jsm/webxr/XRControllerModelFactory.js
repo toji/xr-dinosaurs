@@ -188,6 +188,17 @@ function addAssetSceneToControllerModel( controllerModel, scene ) {
 
 		scene.traverse( ( child ) => {
 
+			// This only really applies to the hand mesh. If a hand is loaded as a
+			// controller rather than a skinned mesh the lack of joint data will cause
+			// it to render as a crumpled up ball at the origin. Discarding skinning
+			// prevents this. (All other XR controller animation is handled separately
+			// from Three's skinning system.)
+			if ( child.isSkinnedMesh ) {
+
+				child.isSkinnedMesh = false;
+
+			}
+
 			if ( child.isMesh ) {
 
 				child.material.envMap = controllerModel.envMap;
@@ -231,7 +242,7 @@ class XRControllerModelFactory {
 
 			const xrInputSource = event.data;
 
-			if ( xrInputSource.targetRayMode !== 'tracked-pointer' || ! xrInputSource.gamepad ) return;
+			if ( xrInputSource.targetRayMode !== 'tracked-pointer' || ! xrInputSource.gamepad || xrInputSource.hand ) return;
 
 			fetchProfile( xrInputSource, this.path, DEFAULT_PROFILE ).then( ( { profile, assetPath } ) => {
 
