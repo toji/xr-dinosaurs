@@ -114,6 +114,10 @@ export class XRDinosaurLoader {
     return this._loadedDinosaurs[key];
   }
 
+  get currentKey() {
+    return this._currentKey;
+  }
+
   get currentDinosaur() {
     return this._currentDinosaur;
   }

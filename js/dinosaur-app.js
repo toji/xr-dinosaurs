@@ -596,6 +596,8 @@ function buildButtons() {
 }
 
 function loadModel(key) {
+  if (xrDinosaurLoader.currentKey == key) { return; }
+
   if (xrDinosaur) {
     scene.remove(xrDinosaur);
     xrDinosaur = null;
