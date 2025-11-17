@@ -19,7 +19,7 @@
 // SOFTWARE.
 
 import * as THREE from 'three';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 
 const LIGHT_PROBE_INTENSITY = 3;
 const REFLECTION_UPDATE_RATE = 1000; // ms
@@ -53,9 +53,9 @@ export class XRLighting extends THREE.Group {
     this._pmremGenerator.compileEquirectangularShader();
 
     return new Promise((resolve) => {
-      let rgbeLoader = new RGBELoader();
+      let hdrLoader = new HDRLoader();
       //rgbeLoader.setDataType(THREE.UnsignedByteType);
-      rgbeLoader.load(url, (texture) => {
+      hdrLoader.load(url, (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         this._envMap = this._pmremGenerator.fromEquirectangular(texture).texture;
         if (!this._xrEnvMap) {
